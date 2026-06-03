@@ -58,6 +58,9 @@
 .fc-dl-btn-danger { background: #dc2626; color: #fff; }
 .fc-dl-btn-danger:hover { background: #b91c1c; }
 
+.fc-dl-btn-success { background: #16a34a; color: #fff; }
+.fc-dl-btn-success:hover { background: #15803d; }
+
 /* ── Header da tela ────────────────────────────────── */
 .fc-dl-topbar {
     display: flex;

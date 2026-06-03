@@ -311,16 +311,32 @@
                     return;
                 }
 
-                // Insere botão de download
+                var isPng   = res.data.type === 'png';
+                var sizeKB  = Math.round(res.data.size / 1024);
+                var label   = isPng
+                    ? '⬇ Baixar PNG (' + sizeKB + ' KB)'
+                    : '⬇ Baixar ZIP (' + sizeKB + ' KB)';
+
+                // Dispara o download automaticamente (ainda dentro da cadeia
+                // de gesto do usuário, então o browser aceita sem bloqueio)
+                var trigger = document.createElement('a');
+                trigger.href     = res.data.url;
+                trigger.download = res.data.filename;
+                trigger.style.display = 'none';
+                document.body.appendChild(trigger);
+                trigger.click();
+                setTimeout(function () { document.body.removeChild(trigger); }, 200);
+
+                // Mantém botão visível para re-download caso necessário
                 var existing = document.getElementById('fc-dl-download-btn');
                 if (existing) existing.remove();
 
                 var dlBtn = document.createElement('a');
-                dlBtn.id        = 'fc-dl-download-btn';
-                dlBtn.href      = res.data.url;
-                dlBtn.download  = res.data.filename;
-                dlBtn.className = 'fc-dl-btn fc-dl-btn-primary';
-                dlBtn.textContent = '⬇ Baixar ZIP (' + Math.round(res.data.size / 1024) + ' KB)';
+                dlBtn.id          = 'fc-dl-download-btn';
+                dlBtn.href        = res.data.url;
+                dlBtn.download    = res.data.filename;
+                dlBtn.className   = 'fc-dl-btn fc-dl-btn-success';
+                dlBtn.textContent = label;
                 dlBtn.style.marginLeft = '8px';
 
                 var actionsBar = document.querySelector('.fc-dl-topbar-actions');

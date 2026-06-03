@@ -1,6 +1,8 @@
 <?php
 /**
- * Chama o Puppeteer /render-batch e entrega o ZIP para download.
+ * Chama o Puppeteer /render-batch e entrega o arquivo para download.
+ * - 1 jogador  → salva e retorna PNG direto
+ * - N jogadores → salva e retorna ZIP
  */
 
 if ( ! defined( 'WPINC' ) ) die;
@@ -11,11 +13,11 @@ class FC_DL_Png_Builder {
     const CARD_WIDTH    = 250;   // px — mesmo tamanho do frontend para proporção idêntica
 
     /**
-     * Recebe array de players já renderizados pelo PHP e gera o ZIP.
+     * Recebe array de players já renderizados pelo PHP e gera PNG / ZIP.
      *
-     * @param array $players  [ ['name'=>'...', 'card_html'=>'...'], ... ]
-     * @param string $css     CSS do renderer (sem tags <style>)
-     * @return array|WP_Error { url, filename } ou WP_Error
+     * @param array  $players  [ ['name'=>'...', 'card_html'=>'...'], ... ]
+     * @param string $css      CSS do renderer (sem tags <style>)
+     * @return array|WP_Error { url, filename, size, type:'png'|'zip' } ou WP_Error
      */
     public static function generate( array $players, string $css ) {
 
@@ -56,9 +58,72 @@ class FC_DL_Png_Builder {
             return new WP_Error( 'puppeteer_error', $msg );
         }
 
-        // Salva o ZIP em uploads/fc-exports/
         $zip_bytes = wp_remote_retrieve_body( $response );
+
+        // ── Jogador único → PNG direto ────────────────────────
+        if ( count( $players ) === 1 ) {
+            $extracted = self::extract_single_png( $zip_bytes );
+            if ( ! is_wp_error( $extracted ) ) {
+                return self::save_png( $extracted, $players[0]['name'] );
+            }
+            // Se a extração falhar, cai no ZIP como fallback
+        }
+
+        // ── Múltiplos jogadores → ZIP ─────────────────────────
         return self::save_zip( $zip_bytes );
+    }
+
+    // ── Extrai o primeiro PNG de um ZIP em memória ────────────
+    private static function extract_single_png( string $zip_bytes ) {
+        $tmp = tempnam( sys_get_temp_dir(), 'fc_zip_' );
+        if ( file_put_contents( $tmp, $zip_bytes ) === false ) {
+            return new WP_Error( 'tmp_write', 'Falha ao criar arquivo temporário' );
+        }
+
+        $z = new ZipArchive();
+        if ( $z->open( $tmp ) !== true ) {
+            unlink( $tmp );
+            return new WP_Error( 'zip_open', 'Falha ao abrir ZIP' );
+        }
+
+        $png = $z->getFromIndex( 0 );
+        $z->close();
+        unlink( $tmp );
+
+        if ( $png === false ) {
+            return new WP_Error( 'zip_extract', 'Falha ao extrair PNG do ZIP' );
+        }
+
+        return $png; // string com os bytes do PNG
+    }
+
+    // ── Salva PNG e retorna URL ───────────────────────────────
+    private static function save_png( string $bytes, string $player_name ) {
+        $upload  = wp_upload_dir();
+        $dir     = trailingslashit( $upload['basedir'] ) . 'fc-exports';
+        $dir_url = trailingslashit( $upload['baseurl'] ) . 'fc-exports';
+
+        if ( ! file_exists( $dir ) ) {
+            wp_mkdir_p( $dir );
+            file_put_contents( $dir . '/.htaccess', "Options -Indexes\n" );
+        }
+
+        self::cleanup( $dir );
+
+        $safe     = sanitize_file_name( $player_name ?: 'player' );
+        $filename = $safe . '_' . date( 'YmdHis' ) . '.png';
+        $filepath = $dir . '/' . $filename;
+
+        if ( file_put_contents( $filepath, $bytes ) === false ) {
+            return new WP_Error( 'save_failed', 'Falha ao salvar PNG no servidor' );
+        }
+
+        return [
+            'url'      => $dir_url . '/' . $filename,
+            'filename' => $filename,
+            'size'     => strlen( $bytes ),
+            'type'     => 'png',
+        ];
     }
 
     // ── Salva ZIP e retorna URL ───────────────────────────────
@@ -72,7 +137,6 @@ class FC_DL_Png_Builder {
             file_put_contents( $dir . '/.htaccess', "Options -Indexes\n" );
         }
 
-        // Limpa exports com mais de 1 hora
         self::cleanup( $dir );
 
         $filename = 'players_' . date( 'YmdHis' ) . '_' . substr( uniqid(), -4 ) . '.zip';
@@ -86,12 +150,13 @@ class FC_DL_Png_Builder {
             'url'      => $dir_url . '/' . $filename,
             'filename' => $filename,
             'size'     => strlen( $bytes ),
+            'type'     => 'zip',
         ];
     }
 
-    // ── Remove ZIPs antigos (> 1h) ────────────────────────────
+    // ── Remove arquivos antigos (> 1h) ────────────────────────
     private static function cleanup( string $dir ) {
-        foreach ( glob( $dir . '/*.zip' ) ?: [] as $file ) {
+        foreach ( glob( $dir . '/*.{zip,png}', GLOB_BRACE ) ?: [] as $file ) {
             if ( filemtime( $file ) < time() - 3600 ) {
                 @unlink( $file );
             }
