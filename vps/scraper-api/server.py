@@ -50,6 +50,8 @@ def run_scraper(label: str, url: str) -> None:
                 "--module", "squads",
                 "--op",     "scrape",
                 "--url",    url,
+                "--ajax",   "http://localhost",
+                "--nonce",  "local",
             ],
             capture_output=True,
             text=True,
