@@ -388,14 +388,14 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
                 // Primeiro item: apenas R ou L (texto simples)
                 $svg .= '<text x="' . self::f($x_position) . '" y="' . self::f($text_y + 1) . '" ';
                 $svg .= 'class="hex-extra-text" text-anchor="middle" dominant-baseline="middle" ';
-                $svg .= 'fill="var(--extra-info-border)" font-family="Arial,sans-serif" font-size="11" font-weight="700">';
+                $svg .= 'fill="var(--extra-info-border)" font-family="Montserrat,Arial,sans-serif" font-size="11" font-weight="700">';
                 $svg .= esc_html($value);
                 $svg .= '</text>';
             } elseif ($is_skill) {
                 // Segundo item: número com estrela
                 $svg .= '<text x="' . self::f($x_position) . '" y="' . self::f($text_y + 1) . '" ';
                 $svg .= 'class="hex-extra-text" text-anchor="middle" dominant-baseline="middle" ';
-                $svg .= 'fill="var(--extra-info-border)" font-family="Arial,sans-serif" font-size="11" font-weight="700">';
+                $svg .= 'fill="var(--extra-info-border)" font-family="Montserrat,Arial,sans-serif" font-size="11" font-weight="700">';
                 $svg .= esc_html($value . '★');
                 $svg .= '</text>';
             } elseif ($is_weak_foot) {
@@ -405,7 +405,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
                 
                 $svg .= '<text x="' . self::f($number_x) . '" y="' . self::f($text_y + 1) . '" ';
                 $svg .= 'class="hex-extra-text" text-anchor="middle" dominant-baseline="middle" ';
-                $svg .= 'fill="var(--extra-info-border)" font-family="Arial,sans-serif" font-size="11" font-weight="700">';
+                $svg .= 'fill="var(--extra-info-border)" font-family="Montserrat,Arial,sans-serif" font-size="11" font-weight="700">';
                 $svg .= esc_html($value);
                 $svg .= '</text>';
                 
@@ -435,7 +435,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
             
             $svg .= '<text x="' . self::f($rating_x) . '" y="' . self::f($text_y + 1) . '" ';
             $svg .= 'class="hex-extra-text hex-rating-text" text-anchor="middle" dominant-baseline="middle" ';
-            $svg .= 'fill="' . $rating_text_color . '" font-family="Arial,sans-serif" font-size="11" font-weight="700">';
+            $svg .= 'fill="' . $rating_text_color . '" font-family="Montserrat,Arial,sans-serif" font-size="11" font-weight="700">';
             $svg .= esc_html($futbin_rating);
             $svg .= '</text>';
         }
@@ -754,6 +754,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
             aspect-ratio: 2 / 3;
             border-radius: 12px;
             overflow: hidden;
+            font-family: 'Montserrat', Arial, sans-serif;
             
             
             margin: 0 auto;
@@ -1012,7 +1013,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
         }
 
         .hex-pos-text {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Montserrat', Arial, Helvetica, sans-serif;
             font-size: 16px;
             font-weight: 600;
             fill: var(--alt-pos-border, #ffffff);
@@ -1021,7 +1022,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
         }
 
         .hex-pos-plus {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Montserrat', Arial, Helvetica, sans-serif;
             font-size: 10px;
             font-weight: 700;
             fill: var(--alt-pos-border, #ffffff);

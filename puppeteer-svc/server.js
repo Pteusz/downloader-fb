@@ -65,6 +65,9 @@ async function renderCard(html, css, width) {
 <html>
 <head>
 <meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html { background: transparent; }
@@ -93,6 +96,9 @@ ${css || ''}
             waitUntil: 'networkidle2',
             timeout:   25000,
         });
+
+        // Aguarda carregamento completo das web fonts antes do screenshot
+        await page.evaluate(() => document.fonts.ready);
 
         // Captura exatamente o bounding-box do card (sem padding do body)
         const el = await page.$('.fc-player-card');
