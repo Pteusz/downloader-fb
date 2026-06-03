@@ -83,7 +83,7 @@ class FC_Card_Visual_Renderer {
                     <?php echo esc_html($normalized['position']); ?>
                 </div>
                 <?php if (!empty($normalized['role_plus'])): ?>
-                    <div class="fc-card-role-plus"><?php echo esc_html($normalized['role_plus']); ?></div>
+                    <div class="fc-card-role-plus" style="color: <?php echo esc_attr($text_color); ?>;"><?php echo esc_html($normalized['role_plus']); ?></div>
                 <?php endif; ?>
             </div>
 
