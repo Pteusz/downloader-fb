@@ -3,24 +3,18 @@
 /**
  * puppeteer-svc/server.js
  * ───────────────────────
- * Microserviço de renderização de cards FUT em PNG.
- *
- * POST /render-batch
- *   Body: { players: [{ html, css, name }, ...] }
- *   Response: application/zip  (nome.png por jogador)
- *
- * GET /health → { status: "ok" }
- *
- * Autenticação: header X-FC-Token (configurado via env FC_TOKEN)
+ * POST /render-batch  { players:[{html,css,name},...], width }
+ *   → application/zip  (nome.png por jogador)
+ * GET  /health → { status:"ok" }
  */
 
-const http     = require('http');
-const archiver = require('archiver');
+const http      = require('http');
+const archiver  = require('archiver');
 const puppeteer = require('puppeteer-core');
 
-const PORT    = parseInt(process.env.PORT     || '3000', 10);
-const TOKEN   = process.env.FC_TOKEN          || '';
-const CONCURRENCY = parseInt(process.env.CONCURRENCY || '3', 10);
+const PORT        = parseInt(process.env.PORT        || '3000', 10);
+const TOKEN       = process.env.FC_TOKEN             || '';
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || '3',    10);
 
 // ── Browser singleton ─────────────────────────────────────────
 let browser = null;
@@ -37,10 +31,11 @@ async function getBrowser() {
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--disable-extensions',
+            '--font-render-hinting=none',   // renderização de fonte consistente
         ],
     });
     browser.on('disconnected', () => {
-        console.warn('[puppeteer] browser desconectado — será reiniciado na próxima req');
+        console.warn('[puppeteer] browser desconectado — será reiniciado');
         browser = null;
     });
     console.log('[puppeteer] browser pronto');
@@ -49,20 +44,46 @@ async function getBrowser() {
 
 // ── Renderiza um card e retorna Buffer PNG ────────────────────
 async function renderCard(html, css, width) {
-    const w = width || 400;
-    const b = await getBrowser();
-    const page = await b.newPage();
-    try {
-        await page.setViewport({ width: w + 100, height: 700, deviceScaleFactor: 2 });
+    const w  = width || 400;
+    const h  = Math.ceil(w * 1.6);   // margem vertical suficiente
 
+    const b    = await getBrowser();
+    const page = await b.newPage();
+
+    try {
+        await page.setViewport({
+            width:             w + 40,
+            height:            h + 40,
+            deviceScaleFactor: 2,          // 2× para PNG nítido
+        });
+
+        // Monta HTML completo com:
+        //  - CSS do renderer
+        //  - --cardWidthPx setado explicitamente (evita distorção da bg-image)
+        //  - body sem padding extra
         const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: transparent; padding: 20px; display: inline-block; }
+*, *::before, *::after { box-sizing: border-box; }
+html { background: transparent; }
+body {
+    margin: 0;
+    padding: 0;
+    display: inline-block;
+    background: transparent;
+}
+:root {
+    --cardWidthPx: ${w};
+}
+/* ── CSS do FC Card Renderer ── */
 ${css || ''}
+/* ── Garante tamanho fixo no PNG ── */
+.fc-player-card {
+    width: ${w}px !important;
+    max-width: none !important;
+}
 </style>
 </head>
 <body>${html}</body>
@@ -70,43 +91,52 @@ ${css || ''}
 
         await page.setContent(fullHtml, {
             waitUntil: 'networkidle2',
-            timeout: 25000,
+            timeout:   25000,
         });
 
+        // Captura exatamente o bounding-box do card (sem padding do body)
         const el = await page.$('.fc-player-card');
-        if (!el) throw new Error('Elemento .fc-player-card não encontrado no HTML');
+        if (!el) throw new Error('Elemento .fc-player-card não encontrado');
 
-        return await el.screenshot({ type: 'png', omitBackground: true });
+        const box = await el.boundingBox();
+        const png = await page.screenshot({
+            type:            'png',
+            omitBackground:  true,
+            clip: {
+                x:      Math.floor(box.x),
+                y:      Math.floor(box.y),
+                width:  Math.ceil(box.width),
+                height: Math.ceil(box.height),
+            },
+        });
+
+        return png;
     } finally {
         await page.close();
     }
 }
 
-// ── Concorrência limitada ─────────────────────────────────────
+// ── Pool de concorrência limitada ─────────────────────────────
 async function pool(tasks, limit) {
     const results = new Array(tasks.length);
     let idx = 0;
-
     async function worker() {
         while (idx < tasks.length) {
             const i = idx++;
             results[i] = await tasks[i]();
         }
     }
-
     await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
     return results;
 }
 
 // ── Sanitiza nome para filename ───────────────────────────────
 function safeName(name, i) {
-    const s = (name || `player_${i}`)
+    return (name || `player_${i}`)
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-zA-Z0-9_-]/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '')
-        .slice(0, 60);
-    return s || `player_${i}`;
+        .replace(/_+/g, '_').replace(/^_|_$/g, '')
+        .slice(0, 60) || `player_${i}`;
 }
 
 // ── Servidor HTTP ─────────────────────────────────────────────
@@ -117,21 +147,18 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-    // Health check — sem token
     if (req.method === 'GET' && req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok' }));
         return;
     }
 
-    // Token
     if (TOKEN && req.headers['x-fc-token'] !== TOKEN) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Unauthorized' }));
         return;
     }
 
-    // POST /render-batch
     if (req.method === 'POST' && req.url === '/render-batch') {
         let body = '';
         req.on('data', c => body += c);
@@ -144,24 +171,23 @@ const server = http.createServer(async (req, res) => {
 
                 console.log(`[render-batch] ${players.length} jogadores @ ${width || 400}px`);
 
-                // Renderiza com pool de CONCURRENCY
                 const tasks = players.map((p, i) => async () => {
                     try {
                         const png = await renderCard(p.html, p.css, width);
-                        return { ok: true, name: safeName(p.name, i), png };
+                        return { ok: true,  name: safeName(p.name, i), png };
                     } catch (err) {
                         console.error(`[render] ${p.name}: ${err.message}`);
                         return { ok: false, name: safeName(p.name, i), error: err.message };
                     }
                 });
 
-                const results = await pool(tasks, CONCURRENCY);
+                const results  = await pool(tasks, CONCURRENCY);
                 const rendered = results.filter(r => r.ok);
 
                 if (!rendered.length) throw new Error('Nenhum card renderizado com sucesso');
 
                 // Monta ZIP em memória
-                const zip   = archiver('zip', { zlib: { level: 6 } });
+                const zip    = archiver('zip', { zlib: { level: 6 } });
                 const chunks = [];
                 zip.on('data',    c => chunks.push(c));
                 zip.on('warning', w => console.warn('[zip]', w));
@@ -174,7 +200,7 @@ const server = http.createServer(async (req, res) => {
                 });
 
                 const zipBuffer = Buffer.concat(chunks);
-                console.log(`[render-batch] ZIP ${(zipBuffer.length / 1024).toFixed(0)} KB`);
+                console.log(`[render-batch] ZIP pronto: ${(zipBuffer.length / 1024).toFixed(0)} KB`);
 
                 res.writeHead(200, {
                     'Content-Type':        'application/zip',
@@ -200,6 +226,6 @@ const server = http.createServer(async (req, res) => {
 getBrowser().then(() => {
     server.listen(PORT, () => console.log(`[puppeteer-svc] :${PORT}`));
 }).catch(err => {
-    console.error('[puppeteer-svc] falha ao iniciar browser:', err.message);
+    console.error('[puppeteer-svc] falha ao iniciar:', err.message);
     process.exit(1);
 });

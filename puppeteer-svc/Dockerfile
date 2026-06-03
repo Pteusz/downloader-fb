@@ -1,10 +1,12 @@
 FROM node:20-slim
 
-# Chromium + fontes essenciais
+# Chromium + fontes que imitam o ambiente de browser real
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
+    fonts-noto \
     fonts-noto-color-emoji \
+    fonts-noto-cjk \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
