@@ -171,3 +171,67 @@ function fc_dl_ajax_scrape_status() {
 
     wp_send_json_success( $status );
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_generate_png
+   Gera PNGs dos jogadores selecionados e retorna link do ZIP
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_generate_png',        'fc_dl_ajax_generate_png' );
+add_action( 'wp_ajax_nopriv_fc_dl_generate_png', 'fc_dl_ajax_generate_png' );
+
+function fc_dl_ajax_generate_png() {
+    fc_dl_verify();
+    set_time_limit( 180 );
+
+    $label   = sanitize_text_field( $_POST['label']   ?? '' );
+    $indices = array_map( 'intval', (array) ( $_POST['indices'] ?? [] ) );
+
+    if ( ! $label )          wp_send_json_error( [ 'message' => 'label obrigatório' ] );
+    if ( empty( $indices ) ) wp_send_json_error( [ 'message' => 'Selecione ao menos um jogador' ] );
+
+    // Busca dados do squad
+    $data = FC_DL_VPS_Api::get_squad( $label );
+    if ( ! $data || ! empty( $data['error'] ) ) {
+        wp_send_json_error( [ 'message' => 'Squad não encontrado' ] );
+    }
+
+    $can_render = class_exists( 'FC_Card_Visual_Renderer' )
+               && class_exists( 'FC_Card_Normalizer' );
+    if ( ! $can_render ) {
+        wp_send_json_error( [ 'message' => 'FC Card Renderer não instalado' ] );
+    }
+
+    // Filtra só os índices selecionados e renderiza o HTML
+    $players = [];
+    foreach ( $indices as $idx ) {
+        $item = $data['data'][ $idx ] ?? null;
+        if ( ! $item ) continue;
+
+        $p          = fc_dl_adapt_player( $item['player'] ?? [] );
+        $normalized = FC_Card_Normalizer::normalize( $p );
+        $card_html  = FC_Card_Visual_Renderer::render_card( $normalized, [
+            'width'           => 400,
+            'show_playstyles' => true,
+            'show_extra_info' => true,
+            'responsive'      => false,   // tamanho fixo no PNG
+        ] );
+
+        $players[] = [
+            'name'      => $p['name'] ?? "player_$idx",
+            'card_html' => $card_html,
+        ];
+    }
+
+    if ( empty( $players ) ) {
+        wp_send_json_error( [ 'message' => 'Nenhum jogador válido nos índices selecionados' ] );
+    }
+
+    $css    = FC_DL_Png_Builder::get_card_css();
+    $result = FC_DL_Png_Builder::generate( $players, $css );
+
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+    }
+
+    wp_send_json_success( $result );
+}

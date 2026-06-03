@@ -11,9 +11,11 @@ if ( ! defined( 'WPINC' ) ) die;
 define( 'FC_DL_VERSION',  '1.0.0' );
 define( 'FC_DL_DIR',      plugin_dir_path( __FILE__ ) );
 define( 'FC_DL_URL',      plugin_dir_url( __FILE__ ) );
-define( 'FC_DL_API_BASE', 'https://mobalfutbin.chamacoins.com.br' );
+define( 'FC_DL_API_BASE',         'https://mobalfutbin.chamacoins.com.br' );
+define( 'FC_DL_PUPPETEER_TOKEN',  getenv( 'FC_TOKEN' ) ?: '' );  // mesmo token do .env da VPS
 
 require_once FC_DL_DIR . 'includes/class-vps-api.php';
+require_once FC_DL_DIR . 'includes/class-png-builder.php';
 require_once FC_DL_DIR . 'includes/ajax-handlers.php';
 
 /* ── Shortcode ─────────────────────────────────────────────── */

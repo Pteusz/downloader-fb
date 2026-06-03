@@ -277,15 +277,60 @@
         checks.forEach(function (c) { c.checked = !allChecked; });
     };
 
-    /* Gerar PNG — placeholder (ponto 4) */
+    /* Gerar PNG ──────────────────────────────────────────── */
     window.fcdlGenPng = function () {
-        var sel = Array.from(document.querySelectorAll('.fc-dl-chk:checked'))
-                       .map(function (c) { return c.dataset.name; });
-        if (!sel.length) {
+        var checks  = document.querySelectorAll('.fc-dl-chk:checked');
+        var indices = Array.from(checks).map(function (c) { return c.dataset.idx; });
+
+        if (!indices.length) {
             alert('Selecione ao menos um jogador.');
             return;
         }
-        alert(sel.length + ' jogadores selecionados.\nGeração de PNG será implementada em breve!');
+
+        // Descobre o label atual pelo hash
+        var label = location.hash.replace('#squad-', '').replace('#', '');
+        if (!label) { alert('Squad não identificado.'); return; }
+
+        // Mostra progresso
+        var btn = document.querySelector('[onclick="fcdlGenPng()"]');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
+
+        var fd = new FormData();
+        fd.append('action', 'fc_dl_generate_png');
+        fd.append('nonce',  FC_DL.nonce);
+        fd.append('label',  label);
+        indices.forEach(function (i) { fd.append('indices[]', i); });
+
+        fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (btn) { btn.disabled = false; btn.textContent = '🖼 Gerar PNG'; }
+
+                if (!res.success) {
+                    alert('Erro: ' + (res.data && res.data.message || 'desconhecido'));
+                    return;
+                }
+
+                // Insere botão de download
+                var existing = document.getElementById('fc-dl-download-btn');
+                if (existing) existing.remove();
+
+                var dlBtn = document.createElement('a');
+                dlBtn.id        = 'fc-dl-download-btn';
+                dlBtn.href      = res.data.url;
+                dlBtn.download  = res.data.filename;
+                dlBtn.className = 'fc-dl-btn fc-dl-btn-primary';
+                dlBtn.textContent = '⬇ Baixar ZIP (' + Math.round(res.data.size / 1024) + ' KB)';
+                dlBtn.style.marginLeft = '8px';
+
+                var actionsBar = document.querySelector('.fc-dl-topbar-actions');
+                if (actionsBar) actionsBar.appendChild(dlBtn);
+                else document.getElementById('fc-dl-screen-squad').appendChild(dlBtn);
+            })
+            .catch(function (err) {
+                if (btn) { btn.disabled = false; btn.textContent = '🖼 Gerar PNG'; }
+                alert('Falha de conexão: ' + err.message);
+            });
     };
 
     /* ── Utils ───────────────────────────────────────────────── */

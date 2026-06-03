@@ -2,23 +2,20 @@ version: "3.8"
 
 # ─────────────────────────────────────────────────────────────
 # futbin-scrap-mob
-#
 # Serviços:
-#   api         → nginx servindo /data/* publicamente
-#   scraper-api → microserviço HTTP que dispara o scraper
-#   scraper     → roda sob demanda (docker compose run scraper ...)
-#
-# Volume compartilhado com o dispatcher:
-#   /opt/scraper-mobile-geral/dispatcher/data → /data
+#   api           → nginx: JSON público + proxy para scraper-api e puppeteer
+#   scraper-api   → HTTP que dispara o scraper e reporta status
+#   puppeteer-svc → renderiza cards HTML em PNG via Chromium headless
+#   scraper       → roda sob demanda (docker compose run scraper ...)
 # ─────────────────────────────────────────────────────────────
 
 networks:
   web:
-    external: true   # rede do Traefik já existente no host
+    external: true
 
 services:
 
-  # ── API pública — serve JSON via nginx ─────────────────────
+  # ── API pública — nginx ────────────────────────────────────
   api:
     image: nginx:alpine
     container_name: futbin-mob-api
@@ -35,7 +32,7 @@ services:
       - "traefik.http.routers.futbin-mob.tls.certresolver=lehttp"
       - "traefik.http.services.futbin-mob.loadbalancer.server.port=80"
 
-  # ── Scraper API — dispara scrape via HTTP ──────────────────
+  # ── Scraper API ────────────────────────────────────────────
   scraper-api:
     build: ./scraper-api
     container_name: futbin-scraper-api
@@ -47,11 +44,23 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /opt/scraper-mobile-geral/futbin-scraper:/compose:ro
 
-  # ── Scraper — roda sob demanda ──────────────────────────────
+  # ── Puppeteer PNG renderer ─────────────────────────────────
+  puppeteer-svc:
+    build: ./puppeteer-svc
+    container_name: futbin-puppeteer
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+      PORT: "3000"
+      FC_TOKEN: "${FC_TOKEN:-}"   # defina em .env ou exporte na shell
+      CONCURRENCY: "3"
+    shm_size: "256mb"             # evita crash do Chromium por /dev/shm pequeno
+
+  # ── Scraper — sob demanda ──────────────────────────────────
   scraper:
     build: .
     container_name: futbin-mob-scraper
     network_mode: host
     volumes:
       - /opt/scraper-mobile-geral/dispatcher/data:/data
-    # sem env_file — nonce não é mais necessário
