@@ -12,6 +12,31 @@ function fc_dl_verify() {
     }
 }
 
+/**
+ * Adapta os dados do jogador da nossa API para o shape
+ * esperado pelo FC_Card_Normalizer / FC_Card_Visual_Renderer.
+ *
+ * Diferenças conhecidas entre o scraper e o normalizer:
+ *  - alt_sidebar: scraper salva positions na raiz;
+ *    renderer espera alt_sidebar.right.positions
+ */
+function fc_dl_adapt_player( array $p ): array {
+
+    // ── alt_sidebar ──────────────────────────────────────────
+    // Scraper: { positions:[...], css_vars:{}, ... }
+    // Renderer espera: { right: { positions:[...], css_vars:{} } }
+    if ( isset( $p['alt_sidebar']['positions'] ) ) {
+        $p['alt_sidebar'] = [
+            'right' => [
+                'positions' => $p['alt_sidebar']['positions'] ?? [],
+                'css_vars'  => $p['alt_sidebar']['css_vars']  ?? [],
+            ],
+        ];
+    }
+
+    return $p;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    fc_dl_get_squads
    Retorna lista de squads com status loaded/not-loaded
@@ -65,20 +90,22 @@ function fc_dl_ajax_get_squad() {
         wp_send_json_error( [ 'message' => 'Squad não encontrado' ] );
     }
 
-    $players = [];
+    $players    = [];
     $can_render = class_exists( 'FC_Card_Visual_Renderer' )
                && class_exists( 'FC_Card_Normalizer' );
 
     foreach ( $data['data'] as $item ) {
-        $p = $item['player'] ?? [];
+        $p = fc_dl_adapt_player( $item['player'] ?? [] );
 
         $card_html = '';
         if ( $can_render ) {
             $normalized = FC_Card_Normalizer::normalize( $p );
-            $card_html  = FC_Card_Visual_Renderer::render_card(
-                $normalized,
-                [ 'width' => 180 ]
-            );
+            $card_html  = FC_Card_Visual_Renderer::render_card( $normalized, [
+                'width'           => 250,
+                'show_playstyles' => true,
+                'show_extra_info' => true,
+                'responsive'      => true,
+            ] );
         }
 
         $players[] = [

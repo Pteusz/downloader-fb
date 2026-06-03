@@ -86,7 +86,7 @@
 /* ── Tela 1: Grid de squads ────────────────────────── */
 .fc-dl-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 18px;
 }
 
@@ -157,7 +157,7 @@
 /* ── Tela 2: grid de jogadores ─────────────────────── */
 .fc-dl-players-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 20px;
 }
 
@@ -215,5 +215,5 @@
     .fc-dl-topbar { gap: 8px; }
     .fc-dl-topbar h2 { font-size: 1.2em; }
     .fc-dl-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; }
-    .fc-dl-players-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .fc-dl-players-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 }
