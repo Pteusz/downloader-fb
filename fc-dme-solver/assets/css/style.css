@@ -1,0 +1,1398 @@
+/**
+ * FC DME Solver - Styles
+ */
+
+
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap');
+/* ==============================
+   LOCK SCROLL (HTML/BODY/#VIEW)
+   ============================== */
+html.fc-modal-open,
+body.fc-modal-open {
+  overflow: hidden !important;
+  height: 100% !important;
+}
+
+/* Se seu tema usa #view como container de scroll (muito provável) */
+#view.fc-modal-open {
+  overflow: hidden !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+/* =========================
+   FC DME - Nome acima do card
+   ========================= */
+
+.fc-dme-card .fc-dme-card-name{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+    font-size: 13px;
+  text-align: center;
+  padding: 5px 4px;
+  margin: 0 0 10px 0;
+    margin-bottom: -15px;
+  border: 1px solid rgba(255, 255, 255, 0.08);; 
+
+  /* vidro fosco */
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+
+  /* melhora contraste em fundos claros/escuros */
+  box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+
+/* texto com gradiente animado (loop) */
+.fc-dme-card .fc-dme-card-name{
+  font-weight: 700;
+  letter-spacing: 0.2px;
+
+  background-image: linear-gradient(
+    90deg,
+    #ED5900,
+    #FF7A1A,
+    #FFC08A,
+    #ED5900,
+    #C94600
+  );
+  background-size: 300% 100%;
+  animation: fcDmeNameGradient 4.5s linear infinite;
+
+  /* gradiente no texto */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes fcDmeNameGradient{
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* ==============================
+   COIN ICON (reuso no modal todo)
+   ============================== */
+.fc-dme-coin-icon{
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: -3px;
+  margin-right: 6px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  opacity: .95;
+}
+
+/* ==============================
+   COINS BADGE (topo direito do elenco)
+   ============================== */
+.fc-dme-challenge-card{
+  position: relative; /* necessário pro badge absolute */
+}
+
+.fc-dme-coins-badge{
+  position: absolute;
+  top: 19%;
+  left: 4%;
+  z-index: 3;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 10px;
+  border-radius: 8px;
+
+  background: rgba(10, 12, 16, 0.70);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 10px 24px rgba(0,0,0,0.45);
+}
+
+.fc-dme-coins-badge .fc-dme-coin-icon{
+  width: 18px;
+  height: 18px;
+  margin-right: 0;
+}
+
+.fc-dme-coins-badge-text{
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: rgba(255,255,255,0.95);
+  white-space: nowrap;
+}
+
+/* ==============================
+   MODAL: impedir scroll chaining
+   ============================== */
+#fc-dme-modal,
+#fc-dme-modal .fc-dme-modal-content,
+#fc-dme-modal .fc-dme-modal-body {
+  overscroll-behavior: contain; /* impede a rolagem “vazar” pro fundo */
+}
+
+/* garante que o scroll é só do body do modal */
+#fc-dme-modal .fc-dme-modal-body {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+
+
+body.fc-modal-open{
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* ============================================
+   TOTALBAR DENTRO DO MODAL (sticky no fim)
+   ============================================ */
+#fc-dme-modal .fc-dme-totalbar--modal{
+  position: sticky !important;
+  bottom: 0;
+
+  /* desfaz o comportamento global (fixed centralizado) */
+  left: auto !important;
+  transform: none !important;
+
+  width: 100% !important;
+  max-width: none !important;
+
+  z-index: 20;
+
+  /* no modal, encosta como “footer” */
+  margin: 16px 0 0 0 !important;
+}
+
+/* ============================================
+   FLOATING TOTAL BAR (FC DME)
+   ============================================ */
+
+.fc-dme-totalbar{
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  width: min(980px, calc(100% - 24px));
+  padding: 12px 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  /* Translucent / glass */
+  background: #0e0e0e96;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  /* Depth */
+  box-shadow:
+    0 16px 50px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(0,0,0,0.25) inset;
+
+  /* Smooth show/hide if você usar classes depois */
+  transition: transform .18s ease, opacity .18s ease, bottom .18s ease;
+}
+
+.fc-dme-totalbar-left{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.fc-dme-totalbar-left > div{
+  color: rgba(255,255,255,0.88);
+  font-size: 14px;
+  line-height: 1.2;
+  gap:4px;
+  display: flex;
+}
+
+.fc-dme-totalbar strong{
+  color: rgba(255,255,255,0.98);
+  font-weight: 800;
+}
+
+.fc-dme-totalbar .emoji{
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+  margin: 0 6px 0 2px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+}
+
+.fc-dme-totalbar-coins{
+  letter-spacing: .2px;
+}
+
+.fc-dme-totalbar-brl{
+  color: rgba(255,255,255,0.92);
+}
+
+/* ============================================
+   CONCLUDE BUTTON (#E85400)
+   ============================================ */
+
+.fc-dme-conclude-btn{
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+
+  padding: 11px 16px;
+  border-radius: 14px;
+
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: .2px;
+
+  color: #0b0d12;
+  background: #E85400;
+
+  transform: translateZ(0);
+  transition: transform .14s ease, filter .14s ease, box-shadow .14s ease, opacity .14s ease;
+}
+
+.fc-dme-conclude-btn:hover{
+  filter: brightness(1.05);
+  box-shadow:
+    0 18px 38px rgba(232,84,0,0.42),
+    0 2px 0 rgba(255,255,255,0.28) inset;
+  transform: translateY(-1px);
+}
+
+.fc-dme-conclude-btn:active{
+  transform: translateY(1px) scale(0.99);
+  filter: brightness(0.98);
+  box-shadow:
+    0 10px 22px rgba(232,84,0,0.30),
+    0 1px 0 rgba(255,255,255,0.20) inset;
+}
+
+.fc-dme-conclude-btn:focus-visible{
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(232,84,0,0.25),
+    0 0 0 1px rgba(255,255,255,0.12) inset,
+    0 18px 38px rgba(232,84,0,0.40);
+}
+
+/* Disabled state (se você aplicar disabled no botão) */
+.fc-dme-conclude-btn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ============================================
+   MOBILE FIT & SAFETY
+   ============================================ */
+
+@media (max-width: 640px){
+  .fc-dme-totalbar{
+    bottom: 10px;
+    width: calc(100% - 16px);
+    padding: 12px;
+    border-radius: 16px;
+    gap: 10px;
+  }
+
+  .fc-dme-totalbar-left{
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .fc-dme-conclude-btn{
+
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
+}
+
+/* Opcional: se você adicionar uma classe pra esconder */
+.fc-dme-totalbar.is-hidden{
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(14px);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ============================================
+   DROPDOWN DE PLATAFORMA
+   ============================================ */
+
+.fc-dme-platform-toggle {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fc-dme-toggle-current {
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.20);
+  background:#6b6b6b0f;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+  min-width: 160px;
+}
+
+.fc-dme-toggle-current:hover {
+  background: rgba(217,217,217,0.14);
+  border-color: rgba(255,255,255,0.30);
+}
+
+.fc-dme-toggle-current img {
+  width: 24px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.fc-dme-toggle-current span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  flex: 1;
+}
+
+.fc-dme-platform-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.95);
+  border: 1px solid rgba(255,255,255,0.15);
+  z-index: 9999;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.fc-dme-platform-toggle[data-open="1"] .fc-dme-platform-menu {
+  display: flex;
+}
+
+.fc-dme-toggle-option {
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(217,217,217,0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.fc-dme-toggle-option:hover {
+  background: rgba(217,217,217,0.12);
+  border-color: rgba(255,255,255,0.20);
+  transform: translateX(4px);
+}
+
+.fc-dme-toggle-option img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.fc-dme-toggle-option span {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+}
+
+/* ============================================
+   WRAPPER & HEADER
+   ============================================ */
+
+.fc-dme-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+
+}
+
+.fc-dme-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 20px;
+}
+
+.fc-dme-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.fc-dme-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ============================================
+   REFRESH BUTTON
+   ============================================ */
+
+.fc-dme-refresh-btn {
+    padding: 10px 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fc-dme-refresh-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.fc-dme-refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   WARNING
+   ============================================ */
+
+.fc-dme-warning {
+    background: rgba(255, 165, 0, 0.1);
+    border: 1px solid rgba(255, 165, 0, 0.3);
+    color: #ffb84d;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+/* ============================================
+   GRID
+   ============================================ */
+
+.fc-dme-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .fc-dme-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .fc-dme-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+/* ============================================
+   CARD
+   ============================================ */
+
+.fc-dme-card {
+    background: rgba(20, 20, 30, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.fc-dme-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.fc-dme-card-content {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================================
+   REWARD
+   ============================================ */
+
+.fc-dme-reward {
+    text-align: center;
+    width: 100%;
+}
+
+.fc-dme-reward-img {
+    width: 100%;
+     height: 250px;
+    aspect-ratio: 16/9;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.fc-dme-reward-img img {
+    width: 80%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.fc-dme-reward-placeholder {
+    font-size: 48px;
+    opacity: 0.3;
+}
+
+.fc-dme-reward-text {
+    font-size: 14px;
+    display: none;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+}
+
+/* ============================================
+   CARD FOOTER
+   ============================================ */
+.fc-dme-card-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ✅ Quando o card foi concluído (Resolver -> Concluído), só ELE vira coluna */
+.fc-dme-card[data-selected="1"] .fc-dme-card-footer{
+    flex-direction: column;
+}
+
+/* Actions (Resolver / Editar / Remover) */
+.fc-dme-actions {
+    display: flex;
+    align-items: center;
+}
+
+/* ✅ Quando Editar + Remover aparecem (card selecionado), aplica gap menor só nesse card */
+.fc-dme-card[data-selected="1"] .fc-dme-actions{
+    gap: 5px;
+}
+
+.fc-dme-price {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.fc-dme-price-icon {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.fc-dme-price-value {
+    letter-spacing: 0.3px;
+}
+
+.fc-dme-solve-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #FF6F00 0%, #E65100 100%);
+    border: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fc-dme-solve-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(255, 111, 0, 0.4);
+}
+button.fc-dme-remove-btn {
+    background: rgb(255 80 80 / 8%);
+}
+
+button.fc-dme-basket-clear {
+    display: none;
+}
+.fc-dme-edit-btn,
+.fc-dme-remove-btn {
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fc-dme-edit-btn:hover,
+.fc-dme-remove-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+
+/* ============================================
+   MODAL
+   ============================================ */
+
+.fc-dme-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+}
+
+.fc-dme-modal.active {
+    display: block;
+}
+
+.fc-dme-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+}
+
+.fc-dme-modal-content {
+    position: relative;
+    max-width: 800px;
+    width: 90%;
+    max-height: 85vh;
+    margin: 5vh auto;
+    background: rgb(0 0 0 / 86%);
+    border-radius: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fc-dme-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.fc-dme-modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+.fc-dme-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(85vh - 48px);
+
+    /* ✅ espaço para a barra sticky não cobrir o fim */
+    padding-bottom: 140px;
+}
+
+
+/* Modal Header */
+.fc-dme-modal-header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.fc-dme-modal-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+}
+
+.fc-dme-modal-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.fc-dme-modal-count {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+}
+
+.fc-dme-modal-total {
+    font-size: 16px;
+    font-weight: 800;
+    color: #FF6F00;
+    display: flex;
+    align-items: center;
+    letter-spacing: 0.3px;
+}
+
+/* ✅ Select All Row */
+.fc-dme-selectall-row {
+  margin: 0 0 16px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #0e0e0e96;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.fc-dme-selectall-row label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.fc-dme-selectall-row span {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.2px;
+}
+
+/* ✅ Checkbox bonito (Select All) */
+.fc-dme-selectall-row input.fc-dme-selectall {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.28);
+  background: rgba(0,0,0,0.25);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: all .18s ease;
+  flex: 0 0 18px;
+}
+
+.fc-dme-selectall-row input.fc-dme-selectall:hover {
+  border-color: rgba(255,255,255,0.40);
+  transform: translateY(-1px);
+}
+
+.fc-dme-selectall-row input.fc-dme-selectall:checked {
+  border-color: rgba(255,111,0,0.85);
+  background: linear-gradient(135deg, rgba(255,111,0,0.95), rgba(230,81,0,0.95));
+}
+
+.fc-dme-selectall-row input.fc-dme-selectall:checked::after {
+  content: "";
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+
+/* ============================================
+   CHALLENGES LIST - GRID
+   ============================================ */
+
+.fc-dme-challenges-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .fc-dme-challenges-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .fc-dme-challenges-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+/* ============================================
+   CHALLENGE CARD - AJUSTADO
+   ============================================ */
+
+.fc-dme-challenge-card {
+    background: rgba(20, 25, 35, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.fc-dme-challenge-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ✅ NOVO: Linha do topo com checkbox + nome */
+.fc-dme-challenge-card .fc-dme-chk-row {
+  margin: 0 !important;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.22);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ✅ Checkbox individual */
+.fc-dme-challenge-card input.fc-dme-chk {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255,255,255,0.28);
+  background: rgba(0,0,0,0.25);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: all .18s ease;
+  flex: 0 0 18px;
+}
+
+.fc-dme-challenge-card input.fc-dme-chk:hover {
+  border-color: rgba(255,255,255,0.40);
+  transform: translateY(-1px);
+}
+
+.fc-dme-challenge-card input.fc-dme-chk:checked {
+  border-color: rgba(255,111,0,0.85);
+  background: linear-gradient(135deg, rgba(255,111,0,0.95), rgba(230,81,0,0.95));
+}
+
+.fc-dme-challenge-card input.fc-dme-chk:checked::after {
+  content: "";
+  width: 4px;
+  height: 10px;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(45deg);
+  margin-top: -1px;
+}
+
+/* ✅ Nome do elenco na linha do checkbox */
+.fc-dme-challenge-name-inline {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  line-height: 1.25;
+  flex: 1;
+  
+  /* Corta texto em 1 linha */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ✅ Imagem do elenco - MAIOR, SEM COMPRESSÃO */
+.fc-dme-challenge-image {
+    width: 100%;
+    aspect-ratio: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.fc-dme-challenge-image img {
+
+
+    object-fit: contain;
+}
+
+.fc-dme-challenge-placeholder {
+    font-size: 56px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.15);
+}
+
+/* ✅ Footer de preços */
+.fc-dme-challenge-footer {
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.3);
+    margin-top: auto;
+}
+
+.fc-dme-challenge-price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.fc-dme-challenge-price-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.fc-dme-challenge-coins {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fc-dme-challenge-price-value {
+    font-size: 15px;
+    font-weight: 800;
+    color: #FF6F00;
+    letter-spacing: 0.3px;
+}
+
+/* Empty state */
+.fc-dme-empty-challenges {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.fc-dme-empty-challenges p {
+    margin: 0;
+    font-size: 15px;
+}
+
+/* ============================================
+   ERROR & EMPTY
+   ============================================ */
+
+.fc-dme-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    padding: 16px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.fc-dme-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.fc-dme-empty p {
+    margin: 0;
+    font-size: 16px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .fc-dme-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .fc-dme-controls {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .fc-dme-platform-toggle {
+        flex: 1;
+    }
+    
+    .fc-dme-modal-content {
+        width: 95%;
+        margin: 2vh auto;
+        max-height: 96vh;
+    }
+    
+    .fc-dme-modal-body {
+        padding: 16px;
+        max-height: calc(96vh - 32px);
+    }
+    
+    .fc-dme-modal-title {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .fc-dme-platform-menu{
+            right: auto;
+        
+    }
+    .fc-dme-modal-content {
+        width: 95%;
+        position: absolute;
+        
+        left: 3%;
+    }
+    .fc-dme-toggle-current{    padding: 5px 60px;}
+    .fc-dme-solve-btn {
+        padding: 5px 10px;
+    }
+    .fc-dme-toggle-option{
+    padding: 5px 50px;}
+    .fc-dme-platform-menu{    padding: 8px 65px;}
+    .fc-dme-card-content {
+        padding: 0px;
+    }
+    
+    .fc-dme-modal-body {
+        padding: 12px;
+    }
+    
+    .fc-dme-challenge-name-inline {
+        font-size: 12px;
+    }
+    
+    .fc-dme-challenge-image {
+        padding: 16px;
+    }
+}
+
+/* ============================================
+   BASKET BAR - BOTÃO COMPRAR (shine / reflexão loop)
+   ============================================ */
+strong.fc-dme-basket-count {
+    color: #ff6f00;
+}
+
+#fc-dme-basketbar .fc-dme-basket-buy{
+  appearance: none;
+  -webkit-appearance: none;
+
+  border: none !important;
+  outline: none;
+
+  background: #EA5500;
+  color: #ffffff;
+
+  font-weight: 900;
+  letter-spacing: .2px;
+
+  border-radius: 12px;
+  padding: 11px 16px;
+
+  position: relative;
+  overflow: hidden;
+
+  box-shadow:
+    0 16px 40px rgba(234,85,0,0.35),
+    0 0 0 1px rgba(255,255,255,0.14) inset;
+
+  transform: translateZ(0);
+  transition: transform .14s ease, filter .14s ease, box-shadow .14s ease, opacity .14s ease;
+}
+
+#fc-dme-basketbar .fc-dme-basket-buy:hover{
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    0 18px 46px rgba(234,85,0,0.42),
+    0 0 0 1px rgba(255,255,255,0.16) inset;
+}
+
+#fc-dme-basketbar .fc-dme-basket-buy:active{
+  transform: translateY(1px) scale(0.99);
+  filter: brightness(0.98);
+}
+
+#fc-dme-basketbar .fc-dme-basket-buy:focus-visible{
+  box-shadow:
+    0 0 0 3px rgba(234,85,0,0.30),
+    0 0 0 1px rgba(255,255,255,0.16) inset,
+    0 18px 46px rgba(234,85,0,0.40);
+}
+
+/* “Reflexão” (shine) em loop */
+#fc-dme-basketbar .fc-dme-basket-buy::after{
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -50%;
+  width: 55%;
+  height: 220%;
+
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.55) 50%,
+    rgba(255,255,255,0) 100%
+  );
+
+  transform: rotate(18deg) translateX(-140%);
+  opacity: 0;
+  pointer-events: none;
+
+  animation: fcDmeBasketShine 2.2s ease-in-out infinite;
+}
+
+@keyframes fcDmeBasketShine{
+  0%   { transform: rotate(18deg) translateX(-140%); opacity: 0; }
+  10%  { opacity: .35; }
+  40%  { transform: rotate(18deg) translateX(360%); opacity: 0; }
+  100% { transform: rotate(18deg) translateX(360%); opacity: 0; }
+}
+
+/* Se você desabilitar o botão no JS, pausa o brilho */
+#fc-dme-basketbar .fc-dme-basket-buy:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+#fc-dme-basketbar .fc-dme-basket-buy:disabled::after{
+  animation: none;
+  opacity: 0;
+}
+
+/* ============================================
+   BASKET BAR - VIDRO FOSCO (glassmorphism)
+   ============================================ */
+
+#fc-dme-basketbar{
+  /* derruba o inline background do JS */
+  background: rgba(14, 14, 18, 0.62) !important;
+
+  border-top: 1px solid rgba(255,255,255,0.12) !important;
+
+  /* vidro fosco real */
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+
+  /* profundidade + borda interna leve */
+  box-shadow:
+    0 -18px 60px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.06) inset !important;
+
+  /* opcional: arredondar topo */
+  border-radius: 16px 16px 0 0;
+
+  /* suaviza render no mobile */
+  transform: translateZ(0);
+}
+
+/* brilho suave no topo (cara de vidro) */
+#fc-dme-basketbar::before{
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0.28),
+    rgba(255,255,255,0)
+  );
+  pointer-events: none;
+}
+html.fc-modal-open #fc-dme-basketbar,
+body.fc-modal-open #fc-dme-basketbar,
+#view.fc-modal-open #fc-dme-basketbar{
+  display: none !important;
+}
+
+/* garante que o pseudo-elemento funcione e nada “escape” */
+#fc-dme-basketbar{
+  position: fixed; /* já é fixed inline, mas reforça */
+  overflow: hidden;
+}
+strong.fc-dme-basket-coins {
+    display: none;
+}
+strong.fc-dme-basket-brl {
+    color: #ff6f00;
+}
+
+/* ============================================
+   COMPLETED BADGE (contador de quantidade)
+   ============================================ */
+
+.fc-dme-completed-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 10px;
+    margin: 0 16px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    transition: background .2s ease, border-color .2s ease;
+}
+
+.fc-dme-card[data-selected="1"] .fc-dme-completed-badge {
+    background: rgba(232, 84, 0, 0.12);
+    border-color: rgba(232, 84, 0, 0.35);
+}
+
+.fc-dme-completed-icon {
+    font-size: 13px;
+    line-height: 1;
+    opacity: .75;
+}
+
+.fc-dme-completed-value {
+    font-size: 13px;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: .4px;
+    transition: color .2s ease;
+}
+
+.fc-dme-card[data-selected="1"] .fc-dme-completed-value {
+    color: #FF6F00;
+}
+
+/* ============================================
+   BOTÃO ADICIONAR
+   ============================================ */
+
+.fc-dme-add-btn {
+    padding: 8px 14px;
+    background: linear-gradient(135deg, rgba(232,84,0,0.18) 0%, rgba(180,60,0,0.18) 100%);
+    border: 1px solid rgba(232, 84, 0, 0.45);
+    color: #FF8C30;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: .2px;
+    transition: all 0.2s ease;
+}
+
+.fc-dme-add-btn:hover {
+    background: linear-gradient(135deg, rgba(232,84,0,0.28) 0%, rgba(180,60,0,0.28) 100%);
+    border-color: rgba(232, 84, 0, 0.70);
+    color: #FFA050;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(232, 84, 0, 0.25);
+}
+
+.fc-dme-add-btn:active {
+    transform: translateY(1px);
+    filter: brightness(0.95);
+}
+
+/* ============================================
+   COMPLETED BADGE - SVG ICON
+   ============================================ */
+
+.fc-dme-completed-svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.55);
+    transition: color .2s ease, transform .3s ease;
+}
+
+.fc-dme-card[data-selected="1"] .fc-dme-completed-svg {
+    color: #FF6F00;
+    animation: fcDmeSvgSpin .55s ease-out;
+}
+
+@keyframes fcDmeSvgSpin {
+    from { transform: rotate(-180deg); }
+    to   { transform: rotate(0deg); }
+}
