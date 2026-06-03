@@ -1,0 +1,57 @@
+version: "3.8"
+
+# ─────────────────────────────────────────────────────────────
+# futbin-scrap-mob
+#
+# Serviços:
+#   api         → nginx servindo /data/* publicamente
+#   scraper-api → microserviço HTTP que dispara o scraper
+#   scraper     → roda sob demanda (docker compose run scraper ...)
+#
+# Volume compartilhado com o dispatcher:
+#   /opt/scraper-mobile-geral/dispatcher/data → /data
+# ─────────────────────────────────────────────────────────────
+
+networks:
+  web:
+    external: true   # rede do Traefik já existente no host
+
+services:
+
+  # ── API pública — serve JSON via nginx ─────────────────────
+  api:
+    image: nginx:alpine
+    container_name: futbin-mob-api
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - /opt/scraper-mobile-geral/dispatcher/data:/usr/share/nginx/html/data:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.futbin-mob.rule=Host(`mobalfutbin.chamacoins.com.br`)"
+      - "traefik.http.routers.futbin-mob.entrypoints=websecure"
+      - "traefik.http.routers.futbin-mob.tls.certresolver=lehttp"
+      - "traefik.http.services.futbin-mob.loadbalancer.server.port=80"
+
+  # ── Scraper API — dispara scrape via HTTP ──────────────────
+  scraper-api:
+    build: ./scraper-api
+    container_name: futbin-scraper-api
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - /opt/scraper-mobile-geral/dispatcher/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/scraper-mobile-geral/futbin-scraper:/compose:ro
+
+  # ── Scraper — roda sob demanda ──────────────────────────────
+  scraper:
+    build: .
+    container_name: futbin-mob-scraper
+    network_mode: host
+    volumes:
+      - /opt/scraper-mobile-geral/dispatcher/data:/data
+    # sem env_file — nonce não é mais necessário
