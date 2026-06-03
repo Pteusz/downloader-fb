@@ -7,6 +7,7 @@ if ( ! defined( 'WPINC' ) ) die;
 
 /* ── helper de segurança ─────────────────────────────────────── */
 function fc_dl_verify() {
+    nocache_headers(); // garante que WP Rocket/CDN não serve resposta cacheada
     if ( ! check_ajax_referer( 'fc_dl_nonce', 'nonce', false ) ) {
         wp_send_json_error( [ 'message' => 'Nonce inválido' ], 403 );
     }

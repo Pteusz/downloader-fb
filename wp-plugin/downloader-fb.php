@@ -20,17 +20,21 @@ require_once FC_DL_DIR . 'includes/ajax-handlers.php';
 add_shortcode( 'player_downloader', 'fc_dl_shortcode' );
 
 function fc_dl_shortcode() {
+    // Versão dinâmica = timestamp do arquivo → sem cache stale após update
+    $css_ver = filemtime( FC_DL_DIR . 'assets/css/downloader.css' );
+    $js_ver  = filemtime( FC_DL_DIR . 'assets/js/app.js' );
+
     wp_enqueue_style(
         'fc-dl-css',
         FC_DL_URL . 'assets/css/downloader.css',
         [],
-        FC_DL_VERSION
+        $css_ver
     );
     wp_enqueue_script(
         'fc-dl-js',
         FC_DL_URL . 'assets/js/app.js',
         [],
-        FC_DL_VERSION,
+        $js_ver,
         true
     );
     wp_localize_script( 'fc-dl-js', 'FC_DL', [
@@ -38,7 +42,7 @@ function fc_dl_shortcode() {
         'nonce'   => wp_create_nonce( 'fc_dl_nonce' ),
     ] );
 
-    // CSS dos cards (injetado inline para garantir estilo correto)
+    // CSS dos cards (inline — garantido mesmo com WP Rocket combinando CSS)
     $card_css = '';
     if ( class_exists( 'FC_Card_Visual_Renderer' ) ) {
         $card_css = FC_Card_Visual_Renderer::get_card_css();
@@ -58,3 +62,45 @@ function fc_dl_shortcode() {
     <?php
     return ob_get_clean();
 }
+
+/* ── WP Rocket: evitar cache/minify nos assets do plugin ───── */
+
+// Exclui o JS do combine/minify do Rocket
+add_filter( 'rocket_exclude_js', function ( $excluded ) {
+    $excluded[] = str_replace(
+        ABSPATH, '/', FC_DL_DIR
+    ) . 'assets/js/app.js';
+    return $excluded;
+} );
+
+// Exclui o CSS do combine/minify do Rocket
+add_filter( 'rocket_exclude_css', function ( $excluded ) {
+    $excluded[] = str_replace(
+        ABSPATH, '/', FC_DL_DIR
+    ) . 'assets/css/downloader.css';
+    return $excluded;
+} );
+
+// Exclui o CSS do lazyload do Rocket
+add_filter( 'rocket_exclude_lazyload_css', function ( $excluded ) {
+    $excluded[] = str_replace(
+        ABSPATH, '/', FC_DL_DIR
+    ) . 'assets/css/downloader.css';
+    return $excluded;
+} );
+
+// Desativa cache de página quando o shortcode estiver presente
+add_action( 'wp', function () {
+    global $post;
+    if ( ! is_a( $post, 'WP_Post' ) ) return;
+    if ( has_shortcode( $post->post_content, 'player_downloader' ) ) {
+        // WP Rocket: não cachear esta página
+        if ( function_exists( 'rocket_clean_post' ) ) {
+            add_filter( 'do_rocket_generate_caching_files', '__return_false' );
+        }
+        // Cabeçalho HTTP para proxies/CDN
+        if ( ! headers_sent() ) {
+            header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0' );
+        }
+    }
+} );

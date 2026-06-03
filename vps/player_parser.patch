@@ -1,0 +1,29 @@
+# Fix: salvar svg_raw nos items de playstyles
+# Arquivo: /opt/scraper-mobile-geral/futbin-scraper/core/player_parser.py
+# Função: _parse_playstyles()
+#
+# Localizar este bloco (~linha 333):
+#
+#         out["items"].append({
+#             "class":     cls,
+#             "style_raw": style_raw,
+#             "css_vars":  css_vars,
+#             "viewBox":   svg.get("viewBox") or svg.get("viewbox"),
+#             "width":     svg.get("width"),
+#             "height":    svg.get("height"),
+#         })
+#
+# Substituir por:
+#
+#         out["items"].append({
+#             "class":     cls,
+#             "style_raw": style_raw,
+#             "css_vars":  css_vars,
+#             "viewBox":   svg.get("viewBox") or svg.get("viewbox"),
+#             "width":     svg.get("width"),
+#             "height":    svg.get("height"),
+#             "svg_raw":   str(svg),   # <-- ADICIONAR ESTA LINHA
+#         })
+#
+# Após aplicar: re-scrape os squads para regenerar os JSONs com svg_raw.
+# Os squads já scrapeados NÃO terão svg_raw até serem re-scrapeados.
