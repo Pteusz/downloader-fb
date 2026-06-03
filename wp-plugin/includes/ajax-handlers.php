@@ -1,0 +1,145 @@
+<?php
+/**
+ * Handlers WordPress AJAX
+ */
+
+if ( ! defined( 'WPINC' ) ) die;
+
+/* ── helper de segurança ─────────────────────────────────────── */
+function fc_dl_verify() {
+    if ( ! check_ajax_referer( 'fc_dl_nonce', 'nonce', false ) ) {
+        wp_send_json_error( [ 'message' => 'Nonce inválido' ], 403 );
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_get_squads
+   Retorna lista de squads com status loaded/not-loaded
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_get_squads',        'fc_dl_ajax_get_squads' );
+add_action( 'wp_ajax_nopriv_fc_dl_get_squads', 'fc_dl_ajax_get_squads' );
+
+function fc_dl_ajax_get_squads() {
+    fc_dl_verify();
+
+    $squads = FC_DL_VPS_Api::get_squads();
+    if ( ! $squads ) {
+        wp_send_json_error( [ 'message' => 'Erro ao buscar squads da API' ] );
+    }
+
+    foreach ( $squads as &$squad ) {
+        $label           = FC_DL_VPS_Api::label_from_url( $squad['url'] );
+        $squad['label']  = $label;
+        $data            = FC_DL_VPS_Api::get_squad( $label );
+        $squad['loaded'] = ( $data !== null && empty( $data['error'] ) );
+        $squad['total']  = $squad['loaded'] ? ( $data['meta']['total'] ?? 0 ) : 0;
+    }
+    unset( $squad );
+
+    wp_send_json_success( $squads );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_get_squad
+   Retorna jogadores de um squad com HTML do card já renderizado
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_get_squad',        'fc_dl_ajax_get_squad' );
+add_action( 'wp_ajax_nopriv_fc_dl_get_squad', 'fc_dl_ajax_get_squad' );
+
+function fc_dl_ajax_get_squad() {
+    fc_dl_verify();
+
+    $label = sanitize_text_field( $_POST['label'] ?? '' );
+    if ( ! $label ) {
+        wp_send_json_error( [ 'message' => 'label obrigatório' ] );
+    }
+
+    $data = FC_DL_VPS_Api::get_squad( $label );
+
+    // Ainda não scrapeado
+    if ( $data === null ) {
+        wp_send_json_success( [ 'loaded' => false, 'players' => [] ] );
+    }
+
+    if ( ! $data || ! empty( $data['error'] ) ) {
+        wp_send_json_error( [ 'message' => 'Squad não encontrado' ] );
+    }
+
+    $players = [];
+    $can_render = class_exists( 'FC_Card_Visual_Renderer' )
+               && class_exists( 'FC_Card_Normalizer' );
+
+    foreach ( $data['data'] as $item ) {
+        $p = $item['player'] ?? [];
+
+        $card_html = '';
+        if ( $can_render ) {
+            $normalized = FC_Card_Normalizer::normalize( $p );
+            $card_html  = FC_Card_Visual_Renderer::render_card(
+                $normalized,
+                [ 'width' => 180 ]
+            );
+        }
+
+        $players[] = [
+            'name'      => $p['name']     ?? '',
+            'rating'    => $p['rating']   ?? '',
+            'position'  => $p['position'] ?? '',
+            'card_html' => $card_html,
+        ];
+    }
+
+    wp_send_json_success( [
+        'loaded'  => true,
+        'meta'    => $data['meta'],
+        'players' => $players,
+    ] );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_run_scrape
+   Dispara o scrape de um squad na VPS
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_run_scrape',        'fc_dl_ajax_run_scrape' );
+add_action( 'wp_ajax_nopriv_fc_dl_run_scrape', 'fc_dl_ajax_run_scrape' );
+
+function fc_dl_ajax_run_scrape() {
+    fc_dl_verify();
+
+    $label = sanitize_text_field( $_POST['label'] ?? '' );
+    $url   = esc_url_raw( $_POST['url']   ?? '' );
+
+    if ( ! $label || ! $url ) {
+        wp_send_json_error( [ 'message' => 'label e url obrigatórios' ] );
+    }
+
+    $result = FC_DL_VPS_Api::run_scrape( $label, $url );
+    if ( ! $result ) {
+        wp_send_json_error( [ 'message' => 'Erro ao iniciar scrape' ] );
+    }
+
+    wp_send_json_success( $result );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_scrape_status
+   Consulta o status de um scrape em andamento
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_scrape_status',        'fc_dl_ajax_scrape_status' );
+add_action( 'wp_ajax_nopriv_fc_dl_scrape_status', 'fc_dl_ajax_scrape_status' );
+
+function fc_dl_ajax_scrape_status() {
+    fc_dl_verify();
+
+    $label = sanitize_text_field( $_POST['label'] ?? '' );
+    if ( ! $label ) {
+        wp_send_json_error( [ 'message' => 'label obrigatório' ] );
+    }
+
+    $status = FC_DL_VPS_Api::get_status( $label );
+    if ( ! $status ) {
+        wp_send_json_error( [ 'message' => 'Erro ao consultar status' ] );
+    }
+
+    wp_send_json_success( $status );
+}
