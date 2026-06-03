@@ -67,10 +67,10 @@ async function renderCard(html, css, width) {
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=block" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
-html { background: transparent; }
+html { background: transparent; font-size: 16px; }
 body {
     margin: 0;
     padding: 0;
@@ -97,8 +97,16 @@ ${css || ''}
             timeout:   25000,
         });
 
-        // Aguarda carregamento completo das web fonts antes do screenshot
-        await page.evaluate(() => document.fonts.ready);
+        // Aguarda carregamento explícito de todos os pesos do Montserrat antes do screenshot.
+        // document.fonts.ready não é suficiente com display=block: pode resolver antes
+        // de todas as variantes de peso (700, 800) terminarem de baixar.
+        await page.evaluate(() => Promise.all([
+            document.fonts.load('400 16px Montserrat'),
+            document.fonts.load('500 16px Montserrat'),
+            document.fonts.load('600 16px Montserrat'),
+            document.fonts.load('700 16px Montserrat'),
+            document.fonts.load('800 16px Montserrat'),
+        ]));
 
         // Captura exatamente o bounding-box do card (sem padding do body)
         const el = await page.$('.fc-player-card');

@@ -755,8 +755,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
             border-radius: 12px;
             overflow: hidden;
             font-family: 'Montserrat', Arial, sans-serif;
-            
-            
+            font-size: 16px;
             margin: 0 auto;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
