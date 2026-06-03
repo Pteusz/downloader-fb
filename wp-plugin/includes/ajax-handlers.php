@@ -202,6 +202,7 @@ function fc_dl_ajax_generate_png() {
     }
 
     // Filtra só os índices selecionados e renderiza o HTML
+    // width = FC_DL_Png_Builder::CARD_WIDTH (250px) — mesmo do frontend para proporção idêntica
     $players = [];
     foreach ( $indices as $idx ) {
         $item = $data['data'][ $idx ] ?? null;
@@ -210,7 +211,7 @@ function fc_dl_ajax_generate_png() {
         $p          = fc_dl_adapt_player( $item['player'] ?? [] );
         $normalized = FC_Card_Normalizer::normalize( $p );
         $card_html  = FC_Card_Visual_Renderer::render_card( $normalized, [
-            'width'           => 400,
+            'width'           => FC_DL_Png_Builder::CARD_WIDTH,
             'show_playstyles' => true,
             'show_extra_info' => true,
             'responsive'      => false,   // tamanho fixo no PNG

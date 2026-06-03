@@ -8,7 +8,7 @@ if ( ! defined( 'WPINC' ) ) die;
 class FC_DL_Png_Builder {
 
     const PUPPETEER_URL = FC_DL_API_BASE . '/render-batch';
-    const CARD_WIDTH    = 400;   // px — resolução do PNG gerado
+    const CARD_WIDTH    = 250;   // px — mesmo tamanho do frontend para proporção idêntica
 
     /**
      * Recebe array de players já renderizados pelo PHP e gera o ZIP.
