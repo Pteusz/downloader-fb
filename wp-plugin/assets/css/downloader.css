@@ -253,3 +253,75 @@
     color: #334155;
     margin: 0;
 }
+
+/* ── Tabs ──────────────────────────────────────────────────── */
+.fc-dl-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0;
+}
+
+.fc-dl-tab {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    font-size: 0.88em;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -2px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.fc-dl-tab:hover {
+    color: #2563eb;
+    background: #f1f5f9;
+}
+
+.fc-dl-tab--active {
+    color: #2563eb;
+    background: #fff;
+    border-color: #e2e8f0;
+    border-bottom-color: #fff;
+}
+
+/* ── Paginação ─────────────────────────────────────────────── */
+.fc-dl-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 36px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.fc-dl-page-info {
+    font-size: 0.88em;
+    font-weight: 600;
+    color: #475569;
+    min-width: 60px;
+    text-align: center;
+}
+
+.fc-dl-page-btn {
+    min-width: 110px;
+    justify-content: center;
+}
+
+.fc-dl-page-btn--disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ── Responsivo (tabs + paginação) ────────────────────────── */
+@media (max-width: 600px) {
+    .fc-dl-tab        { padding: 8px 14px; font-size: 0.82em; }
+    .fc-dl-page-btn   { min-width: 90px; }
+    .fc-dl-pagination { gap: 8px; }
+}

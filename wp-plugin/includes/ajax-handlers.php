@@ -236,3 +236,141 @@ function fc_dl_ajax_generate_png() {
 
     wp_send_json_success( $result );
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_get_dme_items
+   Retorna jogadores do DME com HTML do card já renderizado (paginado)
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_get_dme_items',        'fc_dl_ajax_get_dme_items' );
+add_action( 'wp_ajax_nopriv_fc_dl_get_dme_items', 'fc_dl_ajax_get_dme_items' );
+
+function fc_dl_ajax_get_dme_items() {
+    fc_dl_verify();
+
+    if ( ! class_exists( 'FC_DME_API' ) ) {
+        wp_send_json_error( [ 'message' => 'Plugin FC DME Solver não está ativo' ] );
+    }
+
+    $can_render = class_exists( 'FC_Card_Visual_Renderer' ) && class_exists( 'FC_Card_Normalizer' );
+    if ( ! $can_render ) {
+        wp_send_json_error( [ 'message' => 'FC Card Renderer não instalado' ] );
+    }
+
+    $page     = max( 1, intval( $_POST['page']     ?? 1 ) );
+    $per_page = max( 1, min( 24, intval( $_POST['per_page'] ?? 12 ) ) );
+
+    $items = FC_DME_API::fetch_sbcs( true );
+    if ( is_wp_error( $items ) ) {
+        wp_send_json_error( [ 'message' => $items->get_error_message() ] );
+    }
+
+    // Filtra apenas jogadores com player_details válido
+    $players_raw = array_values( array_filter( $items, function ( $i ) {
+        return ! empty( $i['is_player'] ) && ! empty( $i['player_details'] );
+    } ) );
+
+    $total       = count( $players_raw );
+    $total_pages = max( 1, (int) ceil( $total / $per_page ) );
+    $page        = min( $page, $total_pages );
+    $offset      = ( $page - 1 ) * $per_page;
+    $slice       = array_slice( $players_raw, $offset, $per_page );
+
+    $players = [];
+    foreach ( $slice as $local_idx => $item ) {
+        $p = fc_dl_adapt_player( $item['player_details'] );
+        if ( empty( $p ) ) continue;
+
+        $normalized = FC_Card_Normalizer::normalize( $p );
+        $card_html  = FC_Card_Visual_Renderer::render_card( $normalized, [
+            'width'           => 250,
+            'show_playstyles' => true,
+            'show_extra_info' => true,
+            'responsive'      => true,
+        ] );
+
+        $players[] = [
+            'global_idx' => $offset + $local_idx,
+            'name'       => $p['name']     ?? ( $item['name'] ?? '' ),
+            'rating'     => $p['rating']   ?? '',
+            'position'   => $p['position'] ?? '',
+            'card_html'  => $card_html,
+        ];
+    }
+
+    wp_send_json_success( [
+        'players'     => $players,
+        'page'        => $page,
+        'per_page'    => $per_page,
+        'total'       => $total,
+        'total_pages' => $total_pages,
+    ] );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   fc_dl_generate_dme_png
+   Gera PNGs dos jogadores DME selecionados por índice global
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_generate_dme_png',        'fc_dl_ajax_generate_dme_png' );
+add_action( 'wp_ajax_nopriv_fc_dl_generate_dme_png', 'fc_dl_ajax_generate_dme_png' );
+
+function fc_dl_ajax_generate_dme_png() {
+    fc_dl_verify();
+    set_time_limit( 180 );
+
+    if ( ! class_exists( 'FC_DME_API' ) ) {
+        wp_send_json_error( [ 'message' => 'Plugin FC DME Solver não está ativo' ] );
+    }
+
+    $can_render = class_exists( 'FC_Card_Visual_Renderer' ) && class_exists( 'FC_Card_Normalizer' );
+    if ( ! $can_render ) {
+        wp_send_json_error( [ 'message' => 'FC Card Renderer não instalado' ] );
+    }
+
+    $indices = array_map( 'intval', (array) ( $_POST['indices'] ?? [] ) );
+    if ( empty( $indices ) ) {
+        wp_send_json_error( [ 'message' => 'Selecione ao menos um jogador' ] );
+    }
+
+    $items = FC_DME_API::fetch_sbcs( true );
+    if ( is_wp_error( $items ) ) {
+        wp_send_json_error( [ 'message' => $items->get_error_message() ] );
+    }
+
+    // Reconstrói a mesma lista filtrada do get_dme_items
+    $players_raw = array_values( array_filter( $items, function ( $i ) {
+        return ! empty( $i['is_player'] ) && ! empty( $i['player_details'] );
+    } ) );
+
+    $players = [];
+    foreach ( $indices as $idx ) {
+        $item = $players_raw[ $idx ] ?? null;
+        if ( ! $item ) continue;
+
+        $p          = fc_dl_adapt_player( $item['player_details'] );
+        $normalized = FC_Card_Normalizer::normalize( $p );
+        $card_html  = FC_Card_Visual_Renderer::render_card( $normalized, [
+            'width'           => FC_DL_Png_Builder::CARD_WIDTH,
+            'show_playstyles' => true,
+            'show_extra_info' => true,
+            'responsive'      => false,   // tamanho fixo no PNG
+        ] );
+
+        $players[] = [
+            'name'      => $p['name'] ?? "player_$idx",
+            'card_html' => $card_html,
+        ];
+    }
+
+    if ( empty( $players ) ) {
+        wp_send_json_error( [ 'message' => 'Nenhum jogador válido nos índices selecionados' ] );
+    }
+
+    $css    = FC_DL_Png_Builder::get_card_css();
+    $result = FC_DL_Png_Builder::generate( $players, $css );
+
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( [ 'message' => $result->get_error_message() ] );
+    }
+
+    wp_send_json_success( $result );
+}
