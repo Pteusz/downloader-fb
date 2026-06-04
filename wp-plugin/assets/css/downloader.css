@@ -3,7 +3,6 @@
    Dark theme · Orange accent #f97316
    ═══════════════════════════════════════════════════ */
 
-/* ── Variáveis ─────────────────────────────────────── */
 #fc-dl-app {
     --clr-bg:        #111111;
     --clr-surface:   #1a1a1a;
@@ -20,8 +19,10 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px 16px 100px; /* bottom padding = espaço pra selbar */
+    padding: 20px 16px 100px;
     color: var(--clr-text);
+    /* Bloqueia scroll horizontal causado por cards largos */
+    overflow-x: hidden;
 }
 
 /* ── Loading ───────────────────────────────────────── */
@@ -37,8 +38,7 @@
 
 /* ── Spinner ───────────────────────────────────────── */
 .fc-dl-spinner {
-    width: 42px;
-    height: 42px;
+    width: 42px; height: 42px;
     border: 3px solid var(--clr-border);
     border-top-color: var(--clr-orange);
     border-radius: 50%;
@@ -49,63 +49,41 @@
 
 /* ── Botões ────────────────────────────────────────── */
 .fc-dl-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 9px 18px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.85em;
-    font-weight: 600;
-    line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 9px 18px;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 0.85em; font-weight: 600; line-height: 1;
     text-decoration: none;
     transition: background 0.15s, opacity 0.15s, transform 0.1s;
     white-space: nowrap;
 }
 .fc-dl-btn:active { transform: scale(0.96); }
-
 .fc-dl-btn-primary  { background: var(--clr-orange); color: #fff; }
 .fc-dl-btn-primary:hover { background: var(--clr-orange-dk); }
-
-.fc-dl-btn-ghost {
-    background: var(--clr-surface2);
-    color: var(--clr-text);
-    border: 1px solid var(--clr-border);
-}
+.fc-dl-btn-ghost { background: var(--clr-surface2); color: var(--clr-text); border: 1px solid var(--clr-border); }
 .fc-dl-btn-ghost:hover { background: #2a2a2a; border-color: #444; }
-
-.fc-dl-btn-success  { background: var(--clr-green); color: #fff; }
+.fc-dl-btn-success { background: var(--clr-green); color: #fff; }
 .fc-dl-btn-success:hover { background: var(--clr-green-dk); }
-
-.fc-dl-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.fc-dl-btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
 /* ── Tabs ──────────────────────────────────────────── */
 .fc-dl-tabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 24px;
-    padding-bottom: 0;
+    display: flex; gap: 4px;
+    margin-bottom: 20px;
     border-bottom: 1px solid var(--clr-border);
 }
-
 .fc-dl-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+    display: inline-flex; align-items: center; gap: 7px;
     padding: 10px 16px;
     border-radius: 8px 8px 0 0;
-    font-size: 0.85em;
-    font-weight: 600;
+    font-size: 0.85em; font-weight: 600;
     color: var(--clr-muted);
     text-decoration: none;
-    border: 1px solid transparent;
-    border-bottom: none;
+    border: 1px solid transparent; border-bottom: none;
     margin-bottom: -1px;
     transition: color 0.15s, background 0.15s;
 }
-.fc-dl-tab svg { width: 15px; height: 15px; opacity: 0.7; }
+.fc-dl-tab svg { width: 15px; height: 15px; opacity: 0.6; }
 .fc-dl-tab:hover { color: var(--clr-text); }
 .fc-dl-tab.active {
     color: var(--clr-orange);
@@ -117,326 +95,298 @@
 
 /* ── Topbar ────────────────────────────────────────── */
 .fc-dl-topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px; flex-wrap: wrap;
 }
 .fc-dl-topbar h2 {
-    margin: 0;
-    font-size: 1.2em;
-    font-weight: 700;
-    flex: 1;
-    color: var(--clr-text);
+    margin: 0; font-size: 1.15em; font-weight: 700;
+    flex: 1; color: var(--clr-text);
 }
-.fc-dl-topbar-actions { display: flex; gap: 8px; margin-left: auto; }
+.fc-dl-topbar-right { margin-left: auto; display: flex; gap: 8px; }
+.fc-dl-toggle-btn   { margin-left: auto; }
 
 .fc-dl-count {
     display: inline-block;
-    background: var(--clr-surface2);
-    border: 1px solid var(--clr-border);
+    background: var(--clr-surface2); border: 1px solid var(--clr-border);
     color: var(--clr-muted);
-    font-size: 0.65em;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 99px;
-    vertical-align: middle;
-    margin-left: 6px;
+    font-size: 0.65em; font-weight: 600;
+    padding: 2px 7px; border-radius: 99px;
+    vertical-align: middle; margin-left: 4px;
 }
 
 .fc-dl-back {
-    color: var(--clr-orange);
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.88em;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    color: var(--clr-orange); text-decoration: none;
+    font-weight: 600; font-size: 0.88em; white-space: nowrap;
 }
 .fc-dl-back:hover { color: var(--clr-orange-dk); }
 
-/* ── Barra de ações (squads) ───────────────────────── */
+/* ── Barra de ações squads ─────────────────────────── */
 .fc-dl-actions-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 18px; flex-wrap: wrap;
 }
 
-/* ── Tela 1: Grid de squads ────────────────────────── */
+/* ── Título de secção ──────────────────────────────── */
+.fc-dl-section-title {
+    font-size: 0.82em; font-weight: 700; color: var(--clr-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 12px;
+}
+
+/* ── Grid de squads ────────────────────────────────── */
 .fc-dl-squad-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 14px;
 }
-
 .fc-dl-squad-card {
-    display: block;
-    background: var(--clr-surface);
-    border: 1px solid var(--clr-border);
-    border-radius: 12px;
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
+    display: block; background: var(--clr-surface);
+    border: 1px solid var(--clr-border); border-radius: 12px;
+    overflow: hidden; text-decoration: none; color: inherit;
     transition: border-color 0.2s, transform 0.2s;
 }
-.fc-dl-squad-card:hover {
-    border-color: var(--clr-orange);
-    transform: translateY(-3px);
-}
-
-.fc-dl-squad-img {
-    height: 120px;
-    background: #0a0a0a center / contain no-repeat;
-}
-
-.fc-dl-squad-body {
-    padding: 10px 12px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.fc-dl-squad-name {
-    font-weight: 700;
-    font-size: 0.88em;
-    color: var(--clr-text);
-    line-height: 1.3;
-}
-.fc-dl-squad-meta {
-    font-size: 0.75em;
-    color: var(--clr-muted);
-}
+.fc-dl-squad-card:hover { border-color: var(--clr-orange); transform: translateY(-3px); }
+.fc-dl-squad-img  { height: 120px; background: #0a0a0a center / contain no-repeat; }
+.fc-dl-squad-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 5px; }
+.fc-dl-squad-name { font-weight: 700; font-size: 0.88em; color: var(--clr-text); line-height: 1.3; }
+.fc-dl-squad-meta { font-size: 0.75em; color: var(--clr-muted); }
 
 /* badges */
 .fc-dl-badge {
-    display: inline-block;
-    padding: 3px 9px;
-    border-radius: 99px;
-    font-size: 0.72em;
-    font-weight: 700;
-    width: fit-content;
+    display: inline-block; padding: 3px 9px; border-radius: 99px;
+    font-size: 0.72em; font-weight: 700; width: fit-content;
 }
-.fc-dl-badge-ok    { background: rgba(34,197,94,.15); color: var(--clr-green); border: 1px solid rgba(34,197,94,.3); }
+.fc-dl-badge-ok    { background: rgba(34,197,94,.12);  color: var(--clr-green);  border: 1px solid rgba(34,197,94,.28); }
 .fc-dl-badge-empty { background: rgba(249,115,22,.1);  color: var(--clr-orange); border: 1px solid rgba(249,115,22,.25); }
 
 /* ── Estado intermediário ──────────────────────────── */
 .fc-dl-center-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 64px 24px;
-    text-align: center;
-    color: var(--clr-muted);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 16px; padding: 64px 24px;
+    text-align: center; color: var(--clr-muted);
 }
 .fc-dl-center-box p { margin: 0; font-size: 0.9em; }
-.fc-dl-hint { color: var(--clr-muted); font-size: 0.82em; }
+.fc-dl-hint         { color: var(--clr-muted); font-size: 0.82em; }
 
-/* ── Grid de jogadores ─────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   GRID DE JOGADORES — fix crítico de overflow no mobile
+   A causa do card cortado: grid items têm min-width:auto
+   por padrão, o que permite que ultrapassem a coluna.
+   ══════════════════════════════════════════════════════ */
 .fc-dl-players-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 18px;
 }
 
-/* ── Card wrap (label) ─────────────────────────────── */
+/* Fix de overflow para qualquer filho do grid */
+.fc-dl-players-grid > *,
+.fc-dl-reward-grid  > * {
+    min-width: 0;
+}
+
+/* ── Card wrap (label do jogador) ──────────────────── */
 .fc-dl-player-wrap {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px; cursor: pointer;
+    /* Fix essencial: impede que o item ultrapasse a célula do grid */
+    min-width: 0; width: 100%;
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Checkbox oculto mas acessível */
+/* Checkbox oculto visualmente mas acessível */
 .fc-dl-player-wrap input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-    pointer-events: none;
+    position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;
 }
 
-/* Indicador de seleção flutuante */
+/* Indicador de seleção — posicionado sobre o card */
 .fc-dl-player-wrap::after {
     content: '';
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 24px;
-    height: 24px;
+    top: 8px; right: 8px;
+    width: 22px; height: 22px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.35);
-    background: rgba(0,0,0,0.55);
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.6);
     backdrop-filter: blur(4px);
     transition: background 0.15s, border-color 0.15s;
     pointer-events: none;
     z-index: 10;
 }
 
-/* Selecionado: laranja + checkmark */
+/* Selecionado: laranja + checkmark SVG */
 .fc-dl-player-wrap:has(input:checked)::after {
     background: var(--clr-orange);
     border-color: var(--clr-orange);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
-    background-size: 14px;
+    background-size: 13px;
     background-repeat: no-repeat;
     background-position: center;
 }
 
-/* Borda laranja no card quando selecionado */
+/* Ring laranja no card quando selecionado */
 .fc-dl-player-wrap:has(input:checked) .fc-dl-card-shell {
     outline: 2.5px solid var(--clr-orange);
     border-radius: 13px;
-    box-shadow: 0 0 18px rgba(249,115,22,.25);
+    box-shadow: 0 0 20px rgba(249,115,22,.22);
 }
 
-/* Hover: borda sutil */
-.fc-dl-player-wrap:hover .fc-dl-card-shell {
-    outline: 1.5px solid rgba(249,115,22,.4);
+/* Hover sutil */
+.fc-dl-player-wrap:not(:has(input:checked)):hover .fc-dl-card-shell {
+    outline: 1.5px solid rgba(249,115,22,.35);
     border-radius: 13px;
 }
 
-.fc-dl-card-shell { width: 100%; }
-
-.fc-dl-player-label {
-    font-size: 0.8em;
-    font-weight: 600;
-    text-align: center;
-    color: var(--clr-muted);
-    line-height: 1.3;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* ── Barra de seleção sticky (DME) ─────────────────── */
-.fc-dl-selbar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px 20px;
-    background: rgba(17,17,17,0.96);
-    border-top: 1px solid var(--clr-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    flex-wrap: wrap;
-}
-
-.fc-dl-selbar-info {
-    font-size: 0.88em;
-    color: var(--clr-muted);
-}
-.fc-dl-selbar-info strong {
-    color: var(--clr-orange);
-    font-size: 1.15em;
-}
-
-.fc-dl-selbar-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-left: auto;
-}
-
-/* ── Progresso scrape ──────────────────────────────── */
-.fc-dl-progress-counter {
-    font-size: 1.8em;
-    font-weight: 700;
-    color: var(--clr-text);
-    letter-spacing: -0.5px;
-    line-height: 1;
-}
-.fc-dl-progress-track {
+/* ── Card shell — contém e limita o fc-player-card ── */
+.fc-dl-card-shell {
     width: 100%;
-    max-width: 300px;
-    height: 6px;
-    background: var(--clr-border);
-    border-radius: 99px;
+    min-width: 0;  /* fix grid overflow */
     overflow: hidden;
 }
-.fc-dl-progress-bar {
-    height: 100%;
-    background: var(--clr-orange);
-    border-radius: 99px;
-    transition: width 0.4s ease;
-    min-width: 4px;
-}
-.fc-dl-progress-player {
-    font-size: 0.85em;
-    font-weight: 600;
-    color: var(--clr-text);
-    margin: 0;
+
+/* Força o fc-player-card a respeitar a largura da coluna,
+   sobrepondo o width:250px do inline style do PHP */
+.fc-dl-card-shell .fc-player-card {
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
-/* ── Erro ──────────────────────────────────────────── */
-.fc-dl-err-msg {
-    background: rgba(239,68,68,.1);
-    border: 1px solid rgba(239,68,68,.3);
-    color: var(--clr-red);
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.88em;
-    margin: 8px 0;
+/* ── Label do jogador ──────────────────────────────── */
+.fc-dl-player-label, .fc-dl-reward-label {
+    font-size: 0.78em; font-weight: 600;
+    text-align: center; color: var(--clr-muted);
+    line-height: 1.3; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Badge de expiração ────────────────────────────── */
+.fc-dl-expires-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.72em; font-weight: 600;
+    color: var(--clr-orange);
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.25);
+    padding: 3px 9px; border-radius: 99px;
+    white-space: nowrap; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis;
+}
+.fc-dl-expires-badge svg {
+    width: 12px; height: 12px; flex-shrink: 0;
 }
 
 /* ══════════════════════════════════════════════════════
-   MOBILE — 2 colunas para o grid de jogadores
+   RECOMPENSAS
+   ══════════════════════════════════════════════════════ */
+.fc-dl-reward-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px;
+}
+
+.fc-dl-reward-item {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 6px;
+    min-width: 0;
+}
+
+.fc-dl-reward-card {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; padding: 12px;
+    transition: border-color 0.2s;
+}
+.fc-dl-reward-card:hover { border-color: rgba(249,115,22,.4); }
+
+.fc-dl-reward-card img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+}
+.fc-dl-reward-placeholder { font-size: 2.5em; opacity: 0.5; }
+
+/* ── Barra de seleção sticky ───────────────────────── */
+.fc-dl-selbar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 9999;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 12px;
+    padding: 14px 20px;
+    background: rgba(15,15,15,0.97);
+    border-top: 1px solid var(--clr-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    flex-wrap: wrap;
+}
+.fc-dl-selbar-info       { font-size: 0.88em; color: var(--clr-muted); }
+.fc-dl-selbar-info strong{ color: var(--clr-orange); font-size: 1.2em; }
+.fc-dl-selbar-actions    { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+
+/* ── Progresso scrape ──────────────────────────────── */
+.fc-dl-progress-counter { font-size: 1.8em; font-weight: 700; color: var(--clr-text); line-height: 1; }
+.fc-dl-progress-track   { width: 100%; max-width: 300px; height: 6px; background: var(--clr-border); border-radius: 99px; overflow: hidden; }
+.fc-dl-progress-bar     { height: 100%; background: var(--clr-orange); border-radius: 99px; transition: width 0.4s; min-width: 4px; }
+.fc-dl-progress-player  { font-size: 0.85em; font-weight: 600; color: var(--clr-text); margin: 0; }
+
+/* ── Erro ──────────────────────────────────────────── */
+.fc-dl-err-msg {
+    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3);
+    color: var(--clr-red); padding: 12px 16px; border-radius: 8px;
+    font-size: 0.88em; margin: 8px 0;
+}
+
+/* ══════════════════════════════════════════════════════
+   MOBILE — 2 colunas, selbar compacta
    ══════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
-    #fc-dl-app { padding: 14px 12px 100px; }
+    #fc-dl-app { padding: 12px 12px 90px; }
 
-    .fc-dl-tabs { gap: 4px; }
-    .fc-dl-tab  { padding: 8px 12px; font-size: 0.8em; gap: 5px; }
+    .fc-dl-tabs { gap: 2px; }
+    .fc-dl-tab  { padding: 8px 11px; font-size: 0.78em; gap: 5px; }
     .fc-dl-tab svg { width: 13px; height: 13px; }
 
-    .fc-dl-topbar h2 { font-size: 1.05em; }
+    .fc-dl-topbar h2 { font-size: 1em; }
 
-    /* 2 colunas fixas no mobile */
+    /* 2 colunas no mobile */
     .fc-dl-players-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
-
     .fc-dl-squad-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
+    .fc-dl-reward-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
 
     .fc-dl-player-wrap::after {
-        width: 20px;
-        height: 20px;
-        top: 6px;
-        right: 6px;
+        width: 20px; height: 20px;
+        top: 5px; right: 5px;
         background-size: 11px;
     }
 
-    .fc-dl-player-label { font-size: 0.72em; }
+    .fc-dl-player-label,
+    .fc-dl-reward-label { font-size: 0.7em; }
 
-    .fc-dl-selbar { padding: 12px 14px; }
-    .fc-dl-selbar-info { font-size: 0.82em; }
+    .fc-dl-expires-badge { font-size: 0.68em; padding: 2px 7px; }
 
-    .fc-dl-btn { padding: 9px 13px; font-size: 0.82em; }
+    .fc-dl-selbar { padding: 10px 14px; }
+    .fc-dl-selbar-info { font-size: 0.8em; }
+    .fc-dl-btn  { padding: 9px 13px; font-size: 0.8em; }
 }
 
-/* Tablets: 3 colunas */
+/* Tablets: 3 colunas jogadores */
 @media (min-width: 601px) and (max-width: 900px) {
     .fc-dl-players-grid {
         grid-template-columns: repeat(3, 1fr);
         gap: 14px;
+    }
+    .fc-dl-reward-grid {
+        grid-template-columns: repeat(4, 1fr);
     }
 }

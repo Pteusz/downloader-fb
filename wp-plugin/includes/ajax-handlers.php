@@ -14,8 +14,7 @@ function fc_dl_verify() {
 }
 
 /**
- * Adapta os dados do jogador da nossa API para o shape
- * esperado pelo FC_Card_Normalizer / FC_Card_Visual_Renderer.
+ * Adapta alt_sidebar do scraper para o shape do renderer.
  */
 function fc_dl_adapt_player( array $p ): array {
     if ( isset( $p['alt_sidebar']['positions'] ) ) {
@@ -29,6 +28,18 @@ function fc_dl_adapt_player( array $p ): array {
     return $p;
 }
 
+/**
+ * Traduz expires_in de EN para PT-BR.
+ */
+function fc_dl_translate_expires( string $str ): string {
+    if ( ! $str ) return '';
+    return str_ireplace(
+        [ 'days', 'day', 'weeks', 'week', 'months', 'month', 'hours', 'hour', 'minutes', 'minute' ],
+        [ 'dias', 'dia', 'semanas', 'semana', 'meses',  'mês',  'horas', 'hora', 'minutos',  'minuto' ],
+        $str
+    );
+}
+
 /* ═══════════════════════════════════════════════════════════════
    fc_dl_get_squads
    ═══════════════════════════════════════════════════════════════ */
@@ -37,12 +48,8 @@ add_action( 'wp_ajax_nopriv_fc_dl_get_squads', 'fc_dl_ajax_get_squads' );
 
 function fc_dl_ajax_get_squads() {
     fc_dl_verify();
-
     $squads = FC_DL_VPS_Api::get_squads();
-    if ( ! $squads ) {
-        wp_send_json_error( [ 'message' => 'Erro ao buscar squads da API' ] );
-    }
-
+    if ( ! $squads ) wp_send_json_error( [ 'message' => 'Erro ao buscar squads da API' ] );
     foreach ( $squads as &$squad ) {
         $label           = FC_DL_VPS_Api::label_from_url( $squad['url'] );
         $squad['label']  = $label;
@@ -51,7 +58,6 @@ function fc_dl_ajax_get_squads() {
         $squad['total']  = $squad['loaded'] ? ( $data['meta']['total'] ?? 0 ) : 0;
     }
     unset( $squad );
-
     wp_send_json_success( $squads );
 }
 
@@ -63,21 +69,14 @@ add_action( 'wp_ajax_nopriv_fc_dl_get_squad', 'fc_dl_ajax_get_squad' );
 
 function fc_dl_ajax_get_squad() {
     fc_dl_verify();
-
     $label = sanitize_text_field( $_POST['label'] ?? '' );
     if ( ! $label ) wp_send_json_error( [ 'message' => 'label obrigatório' ] );
-
     $data = FC_DL_VPS_Api::get_squad( $label );
-    if ( $data === null ) {
-        wp_send_json_success( [ 'loaded' => false, 'players' => [] ] );
-    }
-    if ( ! $data || ! empty( $data['error'] ) ) {
-        wp_send_json_error( [ 'message' => 'Squad não encontrado' ] );
-    }
+    if ( $data === null ) wp_send_json_success( [ 'loaded' => false, 'players' => [] ] );
+    if ( ! $data || ! empty( $data['error'] ) ) wp_send_json_error( [ 'message' => 'Squad não encontrado' ] );
 
     $can_render = class_exists( 'FC_Card_Visual_Renderer' ) && class_exists( 'FC_Card_Normalizer' );
     $players    = [];
-
     foreach ( $data['data'] as $item ) {
         $p         = fc_dl_adapt_player( $item['player'] ?? [] );
         $card_html = '';
@@ -89,11 +88,12 @@ function fc_dl_ajax_get_squad() {
             ] );
         }
         $players[] = [
-            'name' => $p['name'] ?? '', 'rating' => $p['rating'] ?? '',
-            'position' => $p['position'] ?? '', 'card_html' => $card_html,
+            'name'      => $p['name']     ?? '',
+            'rating'    => $p['rating']   ?? '',
+            'position'  => $p['position'] ?? '',
+            'card_html' => $card_html,
         ];
     }
-
     wp_send_json_success( [ 'loaded' => true, 'meta' => $data['meta'], 'players' => $players ] );
 }
 
@@ -105,8 +105,8 @@ add_action( 'wp_ajax_nopriv_fc_dl_run_scrape', 'fc_dl_ajax_run_scrape' );
 
 function fc_dl_ajax_run_scrape() {
     fc_dl_verify();
-    $label = sanitize_text_field( $_POST['label'] ?? '' );
-    $url   = esc_url_raw( $_POST['url'] ?? '' );
+    $label  = sanitize_text_field( $_POST['label'] ?? '' );
+    $url    = esc_url_raw( $_POST['url'] ?? '' );
     if ( ! $label || ! $url ) wp_send_json_error( [ 'message' => 'label e url obrigatórios' ] );
     $result = FC_DL_VPS_Api::run_scrape( $label, $url );
     if ( ! $result ) wp_send_json_error( [ 'message' => 'Erro ao iniciar scrape' ] );
@@ -137,18 +137,14 @@ add_action( 'wp_ajax_nopriv_fc_dl_generate_png', 'fc_dl_ajax_generate_png' );
 function fc_dl_ajax_generate_png() {
     fc_dl_verify();
     set_time_limit( 180 );
-
     $label   = sanitize_text_field( $_POST['label'] ?? '' );
     $indices = array_map( 'intval', (array) ( $_POST['indices'] ?? [] ) );
     if ( ! $label )          wp_send_json_error( [ 'message' => 'label obrigatório' ] );
     if ( empty( $indices ) ) wp_send_json_error( [ 'message' => 'Selecione ao menos um jogador' ] );
-
     $data = FC_DL_VPS_Api::get_squad( $label );
     if ( ! $data || ! empty( $data['error'] ) ) wp_send_json_error( [ 'message' => 'Squad não encontrado' ] );
-
     $can_render = class_exists( 'FC_Card_Visual_Renderer' ) && class_exists( 'FC_Card_Normalizer' );
     if ( ! $can_render ) wp_send_json_error( [ 'message' => 'FC Card Renderer não instalado' ] );
-
     $players = [];
     foreach ( $indices as $idx ) {
         $item = $data['data'][ $idx ] ?? null;
@@ -161,9 +157,7 @@ function fc_dl_ajax_generate_png() {
         ] );
         $players[] = [ 'name' => $p['name'] ?? "player_$idx", 'card_html' => $card_html ];
     }
-
     if ( empty( $players ) ) wp_send_json_error( [ 'message' => 'Nenhum jogador válido' ] );
-
     $result = FC_DL_Png_Builder::generate( $players, FC_DL_Png_Builder::get_card_css() );
     if ( is_wp_error( $result ) ) wp_send_json_error( [ 'message' => $result->get_error_message() ] );
     wp_send_json_success( $result );
@@ -171,7 +165,9 @@ function fc_dl_ajax_generate_png() {
 
 /* ═══════════════════════════════════════════════════════════════
    fc_dl_get_dme_items
-   Retorna TODOS os jogadores DME (sem paginação)
+   Retorna jogadores (com card renderizado) E recompensas.
+   Players têm global_idx para PNG (índice no array de players-only).
+   Rewards são apenas visuais (sem checkbox/PNG).
    ═══════════════════════════════════════════════════════════════ */
 add_action( 'wp_ajax_fc_dl_get_dme_items',        'fc_dl_ajax_get_dme_items' );
 add_action( 'wp_ajax_nopriv_fc_dl_get_dme_items', 'fc_dl_ajax_get_dme_items' );
@@ -192,13 +188,16 @@ function fc_dl_ajax_get_dme_items() {
         wp_send_json_error( [ 'message' => $items->get_error_message() ] );
     }
 
-    // Filtra apenas jogadores com player_details válido
+    // ── Separa arrays mantendo o global_idx dos players idêntico
+    //    ao usado em fc_dl_generate_dme_png (índice no players-only array)
     $players_raw = array_values( array_filter( $items, function ( $i ) {
         return ! empty( $i['is_player'] ) && ! empty( $i['player_details'] );
     } ) );
 
-    $players = [];
-    foreach ( $players_raw as $idx => $item ) {
+    $result = [];
+
+    // Players primeiro (com checkbox + PNG)
+    foreach ( $players_raw as $pidx => $item ) {
         $p = fc_dl_adapt_player( $item['player_details'] );
         if ( empty( $p ) ) continue;
 
@@ -210,24 +209,45 @@ function fc_dl_ajax_get_dme_items() {
             'responsive'      => true,
         ] );
 
-        $players[] = [
-            'global_idx' => $idx,
+        $result[] = [
+            'type'       => 'player',
+            'global_idx' => $pidx,
             'name'       => $p['name']     ?? ( $item['name'] ?? '' ),
             'rating'     => $p['rating']   ?? '',
             'position'   => $p['position'] ?? '',
             'card_html'  => $card_html,
+            'expires_in' => fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) ),
+        ];
+    }
+
+    // Recompensas depois (apenas visual, sem checkbox)
+    foreach ( $items as $item ) {
+        if ( ! empty( $item['is_player'] ) ) continue; // pula players
+
+        $name    = trim( (string) ( $item['name'] ?? '' ) );
+        $img     = trim( (string) ( $item['reward_img'] ?? '' ) );
+        $expires = fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) );
+
+        if ( ! $name && ! $img ) continue; // item sem dados visíveis
+
+        $result[] = [
+            'type'       => 'reward',
+            'name'       => $name,
+            'reward_img' => $img,
+            'expires_in' => $expires,
         ];
     }
 
     wp_send_json_success( [
-        'players' => $players,
-        'total'   => count( $players ),
+        'items'         => $result,
+        'total_players' => count( $players_raw ),
+        'total'         => count( $result ),
     ] );
 }
 
 /* ═══════════════════════════════════════════════════════════════
    fc_dl_generate_dme_png
-   Gera PNGs dos jogadores DME selecionados por índice global
+   Índices = posição no array players-only (mesmo filtro acima)
    ═══════════════════════════════════════════════════════════════ */
 add_action( 'wp_ajax_fc_dl_generate_dme_png',        'fc_dl_ajax_generate_dme_png' );
 add_action( 'wp_ajax_nopriv_fc_dl_generate_dme_png', 'fc_dl_ajax_generate_dme_png' );
@@ -236,13 +256,9 @@ function fc_dl_ajax_generate_dme_png() {
     fc_dl_verify();
     set_time_limit( 180 );
 
-    if ( ! class_exists( 'FC_DME_API' ) ) {
-        wp_send_json_error( [ 'message' => 'Plugin FC DME Solver não está ativo' ] );
-    }
-    $can_render = class_exists( 'FC_Card_Visual_Renderer' ) && class_exists( 'FC_Card_Normalizer' );
-    if ( ! $can_render ) {
+    if ( ! class_exists( 'FC_DME_API' ) )      wp_send_json_error( [ 'message' => 'Plugin FC DME Solver não está ativo' ] );
+    if ( ! class_exists( 'FC_Card_Visual_Renderer' ) || ! class_exists( 'FC_Card_Normalizer' ) )
         wp_send_json_error( [ 'message' => 'FC Card Renderer não instalado' ] );
-    }
 
     $indices = array_map( 'intval', (array) ( $_POST['indices'] ?? [] ) );
     if ( empty( $indices ) ) wp_send_json_error( [ 'message' => 'Selecione ao menos um jogador' ] );
@@ -250,6 +266,7 @@ function fc_dl_ajax_generate_dme_png() {
     $items = FC_DME_API::fetch_sbcs( true );
     if ( is_wp_error( $items ) ) wp_send_json_error( [ 'message' => $items->get_error_message() ] );
 
+    // Mesmo filtro do get_dme_items → garante que global_idx bate
     $players_raw = array_values( array_filter( $items, function ( $i ) {
         return ! empty( $i['is_player'] ) && ! empty( $i['player_details'] );
     } ) );
@@ -270,7 +287,6 @@ function fc_dl_ajax_generate_dme_png() {
     }
 
     if ( empty( $players ) ) wp_send_json_error( [ 'message' => 'Nenhum jogador válido' ] );
-
     $result = FC_DL_Png_Builder::generate( $players, FC_DL_Png_Builder::get_card_css() );
     if ( is_wp_error( $result ) ) wp_send_json_error( [ 'message' => $result->get_error_message() ] );
     wp_send_json_success( $result );
