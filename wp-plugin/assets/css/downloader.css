@@ -220,3 +220,36 @@
     .fc-dl-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; }
     .fc-dl-players-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
 }
+
+/* ── Barra de progresso do scraping ────────────────────────── */
+.fc-dl-progress-counter {
+    font-size: 2em;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.5px;
+    line-height: 1;
+}
+
+.fc-dl-progress-track {
+    width: 100%;
+    max-width: 320px;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.fc-dl-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+    min-width: 4px;
+}
+
+.fc-dl-progress-player {
+    font-size: 0.88em;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+}

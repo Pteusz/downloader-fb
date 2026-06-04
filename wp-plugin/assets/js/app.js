@@ -114,7 +114,7 @@
         ajax('fc_dl_scrape_status', { label: label }).then(function (res) {
             if (res.success && res.data.status === 'running') {
                 $('fc-dl-loading').style.display = 'none';
-                renderScraping(label, res.data.message || 'Scraping em andamento...');
+                renderScraping(label, res.data);
                 show('fc-dl-screen-squad');
                 startPoll(label);
                 return;
@@ -159,12 +159,31 @@
             + '</div>';
     }
 
-    function renderScraping(label, msg) {
+    function renderScraping(label, statusData) {
+        var current = statusData.current || 0;
+        var total   = statusData.total   || 0;
+        var player  = statusData.player  || '';
+        var pct     = (total > 0) ? Math.round((current / total) * 100) : 0;
+
+        var counterHtml = (total > 0)
+            ? '<div class="fc-dl-progress-counter">' + current + ' / ' + total + '</div>'
+            : '';
+
+        var barHtml = (total > 0)
+            ? '<div class="fc-dl-progress-track"><div class="fc-dl-progress-bar" style="width:' + pct + '%"></div></div>'
+            : '';
+
+        var nameHtml = player
+            ? '<p class="fc-dl-progress-player">' + esc(player) + '</p>'
+            : '';
+
         $('fc-dl-screen-squad').innerHTML =
             header(label, null) +
             '<div class="fc-dl-center-box">'
             + '<div class="fc-dl-spinner"></div>'
-            + '<p id="fc-dl-poll-msg" class="fc-dl-progress-msg">' + esc(msg) + '</p>'
+            + counterHtml
+            + barHtml
+            + nameHtml
             + '<p class="fc-dl-hint">Aguarde, isso pode levar alguns minutos...</p>'
             + '</div>';
     }
@@ -208,24 +227,26 @@
             ajax('fc_dl_scrape_status', { label: label }).then(function (res) {
                 if (!res.success) return;
 
-                var st  = res.data.status;
-                var msg = res.data.message || st;
-                var el  = $('fc-dl-poll-msg');
-                if (el) el.textContent = msg;
+                var st = res.data.status;
 
-                if (st === 'done') {
+                if (st === 'running') {
+                    renderScraping(label, res.data);
+                } else if (st === 'done') {
                     stopPoll();
                     screenSquad(label);
                 } else if (st === 'error') {
                     stopPoll();
-                    var errBox = document.createElement('p');
-                    errBox.className = 'fc-dl-error';
-                    errBox.textContent = 'Erro no scrape: ' + msg;
+                    var msg = res.data.message || 'Erro desconhecido';
                     var box = $('fc-dl-screen-squad').querySelector('.fc-dl-center-box');
-                    if (box) box.appendChild(errBox);
+                    if (box) {
+                        var errEl = document.createElement('p');
+                        errEl.className   = 'fc-dl-error';
+                        errEl.textContent = 'Erro no scrape: ' + msg;
+                        box.appendChild(errEl);
+                    }
                 }
             });
-        }, 4000);
+        }, 3000);
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -257,7 +278,7 @@
     };
 
     function triggerScrape(label, url) {
-        renderScraping(label, 'Iniciando scraping...');
+        renderScraping(label, { current: 0, total: 0, player: '' });
         ajax('fc_dl_run_scrape', { label: label, url: url }).then(function (res) {
             if (res.success) {
                 startPoll(label);
@@ -317,8 +338,7 @@
                     ? '⬇ Baixar PNG (' + sizeKB + ' KB)'
                     : '⬇ Baixar ZIP (' + sizeKB + ' KB)';
 
-                // Dispara o download automaticamente (ainda dentro da cadeia
-                // de gesto do usuário, então o browser aceita sem bloqueio)
+                // Dispara o download automaticamente
                 var trigger = document.createElement('a');
                 trigger.href     = res.data.url;
                 trigger.download = res.data.filename;

@@ -19,6 +19,11 @@ COMPOSE_DIR = "/compose"
 PORT        = 8001
 LABEL_RE    = re.compile(r"^[a-zA-Z0-9_-]+$")
 
+# Captura linhas como "[1/11] https://..." ou "[Fase 2] Buscando detalhes de 11 jogadores..."
+_RE_PLAYER  = re.compile(r"\[(\d+)/(\d+)\]\s+https?://")
+_RE_TOTAL   = re.compile(r"\[Fase 2\].*?(\d+)\s+jogadores")
+_RE_NAME    = re.compile(r"Player:\s+(.+?)\s+\|")
+
 
 # ── helpers ──────────────────────────────────────────────────
 
@@ -34,47 +39,98 @@ def write_status(label: str, data: dict) -> None:
 # ── worker ───────────────────────────────────────────────────
 
 def run_scraper(label: str, url: str) -> None:
-    """Executa o scraper em background e atualiza status_{label}.json."""
+    """Executa o scraper em background, lê stdout linha a linha e atualiza progresso."""
     write_status(label, {
         "status":  "running",
         "label":   label,
         "message": "Scraping iniciado...",
+        "current": 0,
+        "total":   0,
+        "player":  "",
     })
+
+    cmd = [
+        "docker", "compose",
+        "-f", os.path.join(COMPOSE_DIR, "docker-compose.yml"),
+        "run", "--rm", "scraper",
+        "python", "runner.py",
+        "--module", "squads",
+        "--op",     "scrape",
+        "--url",    url,
+        "--ajax",   "http://localhost",
+        "--nonce",  "local",
+    ]
+
     try:
-        result = subprocess.run(
-            [
-                "docker", "compose",
-                "-f", os.path.join(COMPOSE_DIR, "docker-compose.yml"),
-                "run", "--rm", "scraper",
-                "python", "runner.py",
-                "--module", "squads",
-                "--op",     "scrape",
-                "--url",    url,
-                "--ajax",   "http://localhost",
-                "--nonce",  "local",
-            ],
-            capture_output=True,
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
             cwd=COMPOSE_DIR,
         )
-        if result.returncode == 0:
+
+        current = 0
+        total   = 0
+        player  = ""
+        buf     = []
+
+        for line in proc.stdout:
+            buf.append(line)
+
+            m_total = _RE_TOTAL.search(line)
+            if m_total:
+                total = int(m_total.group(1))
+
+            m_player = _RE_PLAYER.search(line)
+            if m_player:
+                current = int(m_player.group(1))
+                total   = total or int(m_player.group(2))
+
+            m_name = _RE_NAME.search(line)
+            if m_name:
+                player = m_name.group(1).strip()
+
+            if current or total:
+                write_status(label, {
+                    "status":  "running",
+                    "label":   label,
+                    "message": f"Buscando jogador {current} de {total}...",
+                    "current": current,
+                    "total":   total,
+                    "player":  player,
+                })
+
+        proc.wait()
+
+        if proc.returncode == 0:
             write_status(label, {
                 "status":  "done",
                 "label":   label,
                 "message": "Concluído com sucesso",
+                "current": total,
+                "total":   total,
+                "player":  player,
             })
         else:
-            snippet = (result.stderr or result.stdout or "erro desconhecido")[-600:]
+            snippet = "".join(buf)[-600:]
             write_status(label, {
                 "status":  "error",
                 "label":   label,
                 "message": snippet,
+                "current": current,
+                "total":   total,
+                "player":  player,
             })
+
     except Exception as exc:
         write_status(label, {
             "status":  "error",
             "label":   label,
             "message": str(exc),
+            "current": 0,
+            "total":   0,
+            "player":  "",
         })
 
 
