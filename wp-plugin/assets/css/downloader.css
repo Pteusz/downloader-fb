@@ -1,13 +1,27 @@
 /* ═══════════════════════════════════════════════════
    FC Player Downloader — downloader.css
+   Dark theme · Orange accent #f97316
    ═══════════════════════════════════════════════════ */
 
+/* ── Variáveis ─────────────────────────────────────── */
 #fc-dl-app {
+    --clr-bg:        #111111;
+    --clr-surface:   #1a1a1a;
+    --clr-surface2:  #222222;
+    --clr-border:    #2e2e2e;
+    --clr-text:      #f1f1f1;
+    --clr-muted:     #888888;
+    --clr-orange:    #f97316;
+    --clr-orange-dk: #ea6c0c;
+    --clr-green:     #22c55e;
+    --clr-green-dk:  #16a34a;
+    --clr-red:       #ef4444;
+
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 24px 16px;
-    color: #1e293b;
+    padding: 20px 16px 100px; /* bottom padding = espaço pra selbar */
+    color: var(--clr-text);
 }
 
 /* ── Loading ───────────────────────────────────────── */
@@ -16,102 +30,167 @@
     flex-direction: column;
     align-items: center;
     padding: 80px 20px;
-    color: #64748b;
+    color: var(--clr-muted);
     gap: 16px;
 }
+.fc-dl-loading p { font-size: 0.9em; }
 
 /* ── Spinner ───────────────────────────────────────── */
 .fc-dl-spinner {
-    width: 44px;
-    height: 44px;
-    border: 4px solid #e2e8f0;
-    border-top-color: #2563eb;
+    width: 42px;
+    height: 42px;
+    border: 3px solid var(--clr-border);
+    border-top-color: var(--clr-orange);
     border-radius: 50%;
-    animation: fc-dl-spin 0.7s linear infinite;
+    animation: fc-spin 0.65s linear infinite;
     flex-shrink: 0;
 }
-@keyframes fc-dl-spin { to { transform: rotate(360deg); } }
+@keyframes fc-spin { to { transform: rotate(360deg); } }
 
 /* ── Botões ────────────────────────────────────────── */
 .fc-dl-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 9px 18px;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 0.88em;
+    font-size: 0.85em;
     font-weight: 600;
     line-height: 1;
-    transition: background 0.15s, transform 0.1s;
     text-decoration: none;
+    transition: background 0.15s, opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
 }
-.fc-dl-btn:active { transform: scale(0.97); }
+.fc-dl-btn:active { transform: scale(0.96); }
 
-.fc-dl-btn-primary  { background: #2563eb; color: #fff; }
-.fc-dl-btn-primary:hover { background: #1d4ed8; }
+.fc-dl-btn-primary  { background: var(--clr-orange); color: #fff; }
+.fc-dl-btn-primary:hover { background: var(--clr-orange-dk); }
 
-.fc-dl-btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
-.fc-dl-btn-secondary:hover { background: #e2e8f0; }
+.fc-dl-btn-ghost {
+    background: var(--clr-surface2);
+    color: var(--clr-text);
+    border: 1px solid var(--clr-border);
+}
+.fc-dl-btn-ghost:hover { background: #2a2a2a; border-color: #444; }
 
-.fc-dl-btn-danger { background: #dc2626; color: #fff; }
-.fc-dl-btn-danger:hover { background: #b91c1c; }
+.fc-dl-btn-success  { background: var(--clr-green); color: #fff; }
+.fc-dl-btn-success:hover { background: var(--clr-green-dk); }
 
-.fc-dl-btn-success { background: #16a34a; color: #fff; }
-.fc-dl-btn-success:hover { background: #15803d; }
+.fc-dl-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
-/* ── Header da tela ────────────────────────────────── */
+/* ── Tabs ──────────────────────────────────────────── */
+.fc-dl-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+    padding-bottom: 0;
+    border-bottom: 1px solid var(--clr-border);
+}
+
+.fc-dl-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 16px;
+    border-radius: 8px 8px 0 0;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--clr-muted);
+    text-decoration: none;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+    transition: color 0.15s, background 0.15s;
+}
+.fc-dl-tab svg { width: 15px; height: 15px; opacity: 0.7; }
+.fc-dl-tab:hover { color: var(--clr-text); }
+.fc-dl-tab.active {
+    color: var(--clr-orange);
+    background: var(--clr-surface);
+    border-color: var(--clr-border);
+    border-bottom-color: var(--clr-surface);
+}
+.fc-dl-tab.active svg { opacity: 1; }
+
+/* ── Topbar ────────────────────────────────────────── */
 .fc-dl-topbar {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
 }
 .fc-dl-topbar h2 {
     margin: 0;
-    font-size: 1.5em;
+    font-size: 1.2em;
     font-weight: 700;
     flex: 1;
+    color: var(--clr-text);
 }
 .fc-dl-topbar-actions { display: flex; gap: 8px; margin-left: auto; }
 
+.fc-dl-count {
+    display: inline-block;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-muted);
+    font-size: 0.65em;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
 .fc-dl-back {
-    color: #2563eb;
+    color: var(--clr-orange);
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.9em;
+    font-size: 0.88em;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
-.fc-dl-back:hover { text-decoration: underline; }
+.fc-dl-back:hover { color: var(--clr-orange-dk); }
+
+/* ── Barra de ações (squads) ───────────────────────── */
+.fc-dl-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
 
 /* ── Tela 1: Grid de squads ────────────────────────── */
-.fc-dl-grid {
+.fc-dl-squad-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
 }
 
 .fc-dl-squad-card {
     display: block;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: 12px;
     overflow: hidden;
     text-decoration: none;
     color: inherit;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, transform 0.2s;
 }
 .fc-dl-squad-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 28px rgba(0,0,0,.13);
+    border-color: var(--clr-orange);
+    transform: translateY(-3px);
 }
 
 .fc-dl-squad-img {
-    height: 130px;
-    background: #0f172a center / contain no-repeat;
+    height: 120px;
+    background: #0a0a0a center / contain no-repeat;
 }
 
 .fc-dl-squad-body {
@@ -124,11 +203,12 @@
 .fc-dl-squad-name {
     font-weight: 700;
     font-size: 0.88em;
+    color: var(--clr-text);
     line-height: 1.3;
 }
-.fc-dl-squad-date {
-    font-size: 0.76em;
-    color: #94a3b8;
+.fc-dl-squad-meta {
+    font-size: 0.75em;
+    color: var(--clr-muted);
 }
 
 /* badges */
@@ -136,192 +216,227 @@
     display: inline-block;
     padding: 3px 9px;
     border-radius: 99px;
-    font-size: 0.73em;
+    font-size: 0.72em;
     font-weight: 700;
     width: fit-content;
 }
-.fc-dl-badge-ok   { background: #dcfce7; color: #166534; }
-.fc-dl-badge-empty{ background: #fef9c3; color: #854d0e; }
+.fc-dl-badge-ok    { background: rgba(34,197,94,.15); color: var(--clr-green); border: 1px solid rgba(34,197,94,.3); }
+.fc-dl-badge-empty { background: rgba(249,115,22,.1);  color: var(--clr-orange); border: 1px solid rgba(249,115,22,.25); }
 
-/* ── Estado intermediário: não carregado / carregando ─ */
+/* ── Estado intermediário ──────────────────────────── */
 .fc-dl-center-box {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 16px;
-    padding: 72px 24px;
+    padding: 64px 24px;
     text-align: center;
+    color: var(--clr-muted);
 }
-.fc-dl-center-box p { color: #64748b; margin: 0; }
-.fc-dl-progress-msg { color: #475569; font-size: 0.9em; }
-.fc-dl-hint         { color: #94a3b8; font-size: 0.82em; }
+.fc-dl-center-box p { margin: 0; font-size: 0.9em; }
+.fc-dl-hint { color: var(--clr-muted); font-size: 0.82em; }
 
-/* ── Tela 2: grid de jogadores ─────────────────────── */
+/* ── Grid de jogadores ─────────────────────────────── */
 .fc-dl-players-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 18px;
 }
 
+/* ── Card wrap (label) ─────────────────────────────── */
 .fc-dl-player-wrap {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
 
+/* Checkbox oculto mas acessível */
 .fc-dl-player-wrap input[type="checkbox"] {
-    width: 17px;
-    height: 17px;
-    cursor: pointer;
-    accent-color: #2563eb;
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
 }
 
-.fc-dl-player-card-shell { width: 100%; }
+/* Indicador de seleção flutuante */
+.fc-dl-player-wrap::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.35);
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(4px);
+    transition: background 0.15s, border-color 0.15s;
+    pointer-events: none;
+    z-index: 10;
+}
 
-/* highlight selecionado */
-.fc-dl-player-wrap:has(input:checked) .fc-dl-player-card-shell {
-    outline: 3px solid #2563eb;
+/* Selecionado: laranja + checkmark */
+.fc-dl-player-wrap:has(input:checked)::after {
+    background: var(--clr-orange);
+    border-color: var(--clr-orange);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-size: 14px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Borda laranja no card quando selecionado */
+.fc-dl-player-wrap:has(input:checked) .fc-dl-card-shell {
+    outline: 2.5px solid var(--clr-orange);
+    border-radius: 13px;
+    box-shadow: 0 0 18px rgba(249,115,22,.25);
+}
+
+/* Hover: borda sutil */
+.fc-dl-player-wrap:hover .fc-dl-card-shell {
+    outline: 1.5px solid rgba(249,115,22,.4);
     border-radius: 13px;
 }
 
+.fc-dl-card-shell { width: 100%; }
+
 .fc-dl-player-label {
-    font-size: 0.82em;
+    font-size: 0.8em;
     font-weight: 600;
     text-align: center;
-    color: #1e293b;
+    color: var(--clr-muted);
+    line-height: 1.3;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* ── Erros ─────────────────────────────────────────── */
-.fc-dl-error {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 0.9em;
+/* ── Barra de seleção sticky (DME) ─────────────────── */
+.fc-dl-selbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    background: rgba(17,17,17,0.96);
+    border-top: 1px solid var(--clr-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    flex-wrap: wrap;
 }
 
-/* ── Contagem ──────────────────────────────────────── */
-.fc-dl-count {
-    font-size: 0.55em;
-    color: #64748b;
-    font-weight: 400;
-    vertical-align: middle;
-    margin-left: 6px;
+.fc-dl-selbar-info {
+    font-size: 0.88em;
+    color: var(--clr-muted);
+}
+.fc-dl-selbar-info strong {
+    color: var(--clr-orange);
+    font-size: 1.15em;
 }
 
-/* ── Responsivo ────────────────────────────────────── */
-@media (max-width: 600px) {
-    .fc-dl-topbar { gap: 8px; }
-    .fc-dl-topbar h2 { font-size: 1.2em; }
-    .fc-dl-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 12px; }
-    .fc-dl-players-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.fc-dl-selbar-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
 }
 
-/* ── Barra de progresso do scraping ────────────────────────── */
+/* ── Progresso scrape ──────────────────────────────── */
 .fc-dl-progress-counter {
-    font-size: 2em;
+    font-size: 1.8em;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--clr-text);
     letter-spacing: -0.5px;
     line-height: 1;
 }
-
 .fc-dl-progress-track {
     width: 100%;
-    max-width: 320px;
-    height: 10px;
-    background: #e2e8f0;
+    max-width: 300px;
+    height: 6px;
+    background: var(--clr-border);
     border-radius: 99px;
     overflow: hidden;
 }
-
 .fc-dl-progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #2563eb, #3b82f6);
+    background: var(--clr-orange);
     border-radius: 99px;
     transition: width 0.4s ease;
     min-width: 4px;
 }
-
 .fc-dl-progress-player {
-    font-size: 0.88em;
+    font-size: 0.85em;
     font-weight: 600;
-    color: #334155;
+    color: var(--clr-text);
     margin: 0;
 }
 
-/* ── Tabs ──────────────────────────────────────────────────── */
-.fc-dl-tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 0;
-}
-
-.fc-dl-tab {
-    display: inline-block;
-    padding: 10px 20px;
-    border-radius: 8px 8px 0 0;
+/* ── Erro ──────────────────────────────────────────── */
+.fc-dl-err-msg {
+    background: rgba(239,68,68,.1);
+    border: 1px solid rgba(239,68,68,.3);
+    color: var(--clr-red);
+    padding: 12px 16px;
+    border-radius: 8px;
     font-size: 0.88em;
-    font-weight: 600;
-    color: #64748b;
-    text-decoration: none;
-    border: 1px solid transparent;
-    border-bottom: none;
-    margin-bottom: -2px;
-    transition: color 0.15s, background 0.15s;
+    margin: 8px 0;
 }
 
-.fc-dl-tab:hover {
-    color: #2563eb;
-    background: #f1f5f9;
-}
-
-.fc-dl-tab--active {
-    color: #2563eb;
-    background: #fff;
-    border-color: #e2e8f0;
-    border-bottom-color: #fff;
-}
-
-/* ── Paginação ─────────────────────────────────────────────── */
-.fc-dl-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 36px;
-    padding-top: 20px;
-    border-top: 1px solid #e2e8f0;
-}
-
-.fc-dl-page-info {
-    font-size: 0.88em;
-    font-weight: 600;
-    color: #475569;
-    min-width: 60px;
-    text-align: center;
-}
-
-.fc-dl-page-btn {
-    min-width: 110px;
-    justify-content: center;
-}
-
-.fc-dl-page-btn--disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-/* ── Responsivo (tabs + paginação) ────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   MOBILE — 2 colunas para o grid de jogadores
+   ══════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
-    .fc-dl-tab        { padding: 8px 14px; font-size: 0.82em; }
-    .fc-dl-page-btn   { min-width: 90px; }
-    .fc-dl-pagination { gap: 8px; }
+    #fc-dl-app { padding: 14px 12px 100px; }
+
+    .fc-dl-tabs { gap: 4px; }
+    .fc-dl-tab  { padding: 8px 12px; font-size: 0.8em; gap: 5px; }
+    .fc-dl-tab svg { width: 13px; height: 13px; }
+
+    .fc-dl-topbar h2 { font-size: 1.05em; }
+
+    /* 2 colunas fixas no mobile */
+    .fc-dl-players-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .fc-dl-squad-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .fc-dl-player-wrap::after {
+        width: 20px;
+        height: 20px;
+        top: 6px;
+        right: 6px;
+        background-size: 11px;
+    }
+
+    .fc-dl-player-label { font-size: 0.72em; }
+
+    .fc-dl-selbar { padding: 12px 14px; }
+    .fc-dl-selbar-info { font-size: 0.82em; }
+
+    .fc-dl-btn { padding: 9px 13px; font-size: 0.82em; }
+}
+
+/* Tablets: 3 colunas */
+@media (min-width: 601px) and (max-width: 900px) {
+    .fc-dl-players-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
 }

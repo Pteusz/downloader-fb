@@ -15,9 +15,6 @@
     /* ── DOM helpers ─────────────────────────────────────────── */
     var $ = function (id) { return document.getElementById(id); };
 
-    function show(id) { $(id).style.display = ''; }
-    function hide(id) { $(id).style.display = 'none'; }
-
     function setLoading(msg) {
         $('fc-dl-screen-grid').style.display  = 'none';
         $('fc-dl-screen-squad').style.display = 'none';
@@ -27,28 +24,32 @@
         if (p) p.textContent = msg || 'Carregando...';
     }
 
+    function showScreen(id) {
+        $('fc-dl-loading').style.display = 'none';
+        $(id).style.display = '';
+    }
+
     /* ── Estado global ───────────────────────────────────────── */
-    var state = {
-        squads:    null,
-        pollTimer: null
-    };
+    var state = { squads: null, pollTimer: null };
 
     function stopPoll() {
         if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
     }
 
-    /* ══════════════════════════════════════════════════════════
-       TABS helper — renderiza a barra de navegação
-    ══════════════════════════════════════════════════════════ */
+    /* ── Tabs helper ─────────────────────────────────────────── */
     function tabs(active) {
         return '<div class="fc-dl-tabs">'
-            + '<a class="fc-dl-tab' + (active === 'squads' ? ' fc-dl-tab--active' : '') + '" href="#squads">Squads</a>'
-            + '<a class="fc-dl-tab' + (active === 'dme'    ? ' fc-dl-tab--active' : '') + '" href="#dme">DME Players</a>'
+            + '<a class="fc-dl-tab' + (active === 'squads' ? ' active' : '') + '" href="#squads">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'
+            + 'Squads</a>'
+            + '<a class="fc-dl-tab' + (active === 'dme' ? ' active' : '') + '" href="#dme">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+            + 'DME Players</a>'
             + '</div>';
     }
 
     /* ══════════════════════════════════════════════════════════
-       ROTEADOR — hash-based SPA
+       ROTEADOR
     ══════════════════════════════════════════════════════════ */
     function route() {
         stopPoll();
@@ -58,9 +59,8 @@
             screenGrid();
         } else if (hash.indexOf('squad-') === 0) {
             screenSquad(hash.slice(6));
-        } else if (hash === 'dme' || hash.indexOf('dme-') === 0) {
-            var page = (hash === 'dme') ? 1 : (parseInt(hash.slice(4), 10) || 1);
-            screenDme(page);
+        } else if (hash === 'dme') {
+            screenDme();
         }
     }
 
@@ -74,32 +74,28 @@
         setLoading('Carregando squads...');
 
         ajax('fc_dl_get_squads', {}).then(function (res) {
-            $('fc-dl-loading').style.display = 'none';
-
             if (!res.success) {
-                renderError('fc-dl-screen-grid', 'Erro ao carregar squads: ' + (res.data && res.data.message));
-                show('fc-dl-screen-grid');
+                $('fc-dl-screen-grid').innerHTML = errorHtml('Erro ao carregar squads: ' + (res.data && res.data.message));
+                showScreen('fc-dl-screen-grid');
                 return;
             }
-
             state.squads = res.data;
             renderGrid(res.data);
-            show('fc-dl-screen-grid');
+            showScreen('fc-dl-screen-grid');
         }).catch(function () {
-            renderError('fc-dl-screen-grid', 'Falha de conexão.');
-            $('fc-dl-loading').style.display = 'none';
-            show('fc-dl-screen-grid');
+            $('fc-dl-screen-grid').innerHTML = errorHtml('Falha de conexão.');
+            showScreen('fc-dl-screen-grid');
         });
     }
 
     function renderGrid(squads) {
         var html = tabs('squads')
             + '<div class="fc-dl-topbar">'
-            + '<h2>Squads Disponíveis</h2>'
+            + '<h2>Squads</h2>'
             + '<div class="fc-dl-topbar-actions">'
-            + '<button class="fc-dl-btn fc-dl-btn-secondary" onclick="fcdlRefresh()">↻ Atualizar</button>'
+            + '<button class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlRefresh()">↻ Atualizar</button>'
             + '</div></div>'
-            + '<div class="fc-dl-grid">';
+            + '<div class="fc-dl-squad-grid">';
 
         squads.forEach(function (sq) {
             var badge = sq.loaded
@@ -110,9 +106,8 @@
                   + '<div class="fc-dl-squad-img" style="background-image:url(\'' + esc(sq.bg_image) + '\')"></div>'
                   + '<div class="fc-dl-squad-body">'
                   + '<div class="fc-dl-squad-name">' + esc(sq.name) + '</div>'
-                  + '<div class="fc-dl-squad-date">' + esc(sq.created) + '</div>'
-                  + badge
-                  + '</div></a>';
+                  + '<div class="fc-dl-squad-meta">' + esc(sq.created) + '</div>'
+                  + badge + '</div></a>';
         });
 
         html += '</div>';
@@ -127,49 +122,36 @@
 
         ajax('fc_dl_scrape_status', { label: label }).then(function (res) {
             if (res.success && res.data.status === 'running') {
-                $('fc-dl-loading').style.display = 'none';
                 renderScraping(label, res.data);
-                show('fc-dl-screen-squad');
+                showScreen('fc-dl-screen-squad');
                 startPoll(label);
                 return;
             }
             loadSquadData(label);
-        }).catch(function () {
-            loadSquadData(label);
-        });
+        }).catch(function () { loadSquadData(label); });
     }
 
     function loadSquadData(label) {
         ajax('fc_dl_get_squad', { label: label }).then(function (res) {
-            $('fc-dl-loading').style.display = 'none';
-
             if (!res.success) {
-                renderError('fc-dl-screen-squad', res.data && res.data.message);
-                show('fc-dl-screen-squad');
+                $('fc-dl-screen-squad').innerHTML = errorHtml(res.data && res.data.message);
+                showScreen('fc-dl-screen-squad');
                 return;
             }
-
-            if (!res.data.loaded) {
-                renderNotLoaded(label);
-            } else {
-                renderPlayers(label, res.data);
-            }
-            show('fc-dl-screen-squad');
+            if (!res.data.loaded) renderNotLoaded(label);
+            else renderPlayers(label, res.data);
+            showScreen('fc-dl-screen-squad');
         }).catch(function () {
-            renderError('fc-dl-screen-squad', 'Falha de conexão.');
-            $('fc-dl-loading').style.display = 'none';
-            show('fc-dl-screen-squad');
+            $('fc-dl-screen-squad').innerHTML = errorHtml('Falha de conexão.');
+            showScreen('fc-dl-screen-squad');
         });
     }
 
-    /* ── Sub-renders da tela 2 ───────────────────────────────── */
     function renderNotLoaded(label) {
-        $('fc-dl-screen-squad').innerHTML =
-            header(label, null) +
-            '<div class="fc-dl-center-box">'
+        $('fc-dl-screen-squad').innerHTML = squadHeader(label, null)
+            + '<div class="fc-dl-center-box">'
             + '<p>Este squad ainda não foi carregado.</p>'
-            + '<button class="fc-dl-btn fc-dl-btn-primary" onclick="fcdlLoad(\'' + esc(label) + '\')">'
-            + '⬇ Carregar Jogadores</button>'
+            + '<button class="fc-dl-btn fc-dl-btn-primary" onclick="fcdlLoad(\'' + esc(label) + '\')">⬇ Carregar Jogadores</button>'
             + '</div>';
     }
 
@@ -179,43 +161,29 @@
         var player  = statusData.player  || '';
         var pct     = (total > 0) ? Math.round((current / total) * 100) : 0;
 
-        var counterHtml = (total > 0)
-            ? '<div class="fc-dl-progress-counter">' + current + ' / ' + total + '</div>'
-            : '';
-
-        var barHtml = (total > 0)
-            ? '<div class="fc-dl-progress-track"><div class="fc-dl-progress-bar" style="width:' + pct + '%"></div></div>'
-            : '';
-
-        var nameHtml = player
-            ? '<p class="fc-dl-progress-player">' + esc(player) + '</p>'
-            : '';
-
-        $('fc-dl-screen-squad').innerHTML =
-            header(label, null) +
-            '<div class="fc-dl-center-box">'
+        $('fc-dl-screen-squad').innerHTML = squadHeader(label, null)
+            + '<div class="fc-dl-center-box">'
             + '<div class="fc-dl-spinner"></div>'
-            + counterHtml
-            + barHtml
-            + nameHtml
+            + (total > 0 ? '<div class="fc-dl-progress-counter">' + current + ' / ' + total + '</div>' : '')
+            + (total > 0 ? '<div class="fc-dl-progress-track"><div class="fc-dl-progress-bar" style="width:' + pct + '%"></div></div>' : '')
+            + (player    ? '<p class="fc-dl-progress-player">' + esc(player) + '</p>' : '')
             + '<p class="fc-dl-hint">Aguarde, isso pode levar alguns minutos...</p>'
             + '</div>';
     }
 
     function renderPlayers(label, data) {
         var total = data.meta && data.meta.total ? data.meta.total : data.players.length;
-
-        var html = header(label, total)
-            + '<div style="margin-bottom:20px;" class="fc-dl-topbar-actions">'
-            + '<button class="fc-dl-btn fc-dl-btn-secondary" onclick="fcdlToggleAll()">☑ Selecionar Todos</button>'
-            + '<button class="fc-dl-btn fc-dl-btn-primary" onclick="fcdlGenPng()">🖼 Gerar PNG</button>'
+        var html  = squadHeader(label, total)
+            + '<div class="fc-dl-actions-bar">'
+            + '<button class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlToggleAll()">☑ Selecionar todos</button>'
+            + '<button class="fc-dl-btn fc-dl-btn-primary" id="fc-dl-gen-squad-btn" onclick="fcdlGenPng()">🖼 Gerar PNG</button>'
             + '</div>'
             + '<div class="fc-dl-players-grid">';
 
         data.players.forEach(function (p, i) {
             html += '<label class="fc-dl-player-wrap">'
                   + '<input type="checkbox" class="fc-dl-chk" data-idx="' + i + '" data-name="' + esc(p.name) + '">'
-                  + '<div class="fc-dl-player-card-shell">' + p.card_html + '</div>'
+                  + '<div class="fc-dl-card-shell">' + p.card_html + '</div>'
                   + '<span class="fc-dl-player-label">' + esc(p.name) + '</span>'
                   + '</label>';
         });
@@ -224,13 +192,12 @@
         $('fc-dl-screen-squad').innerHTML = html;
     }
 
-    function header(label, total) {
-        var countStr = (total !== null && total !== undefined)
-            ? '<span class="fc-dl-count">' + total + ' jogadores</span>'
-            : '';
+    function squadHeader(label, total) {
+        var count = (total !== null && total !== undefined)
+            ? ' <span class="fc-dl-count">' + total + '</span>' : '';
         return '<div class="fc-dl-topbar">'
             + '<a class="fc-dl-back" href="#squads">← Voltar</a>'
-            + '<h2>' + esc(label) + countStr + '</h2>'
+            + '<h2>' + esc(label) + count + '</h2>'
             + '</div>';
     }
 
@@ -240,23 +207,17 @@
         state.pollTimer = setInterval(function () {
             ajax('fc_dl_scrape_status', { label: label }).then(function (res) {
                 if (!res.success) return;
-
                 var st = res.data.status;
-
-                if (st === 'running') {
-                    renderScraping(label, res.data);
-                } else if (st === 'done') {
+                if      (st === 'running') { renderScraping(label, res.data); }
+                else if (st === 'done')    { stopPoll(); screenSquad(label); }
+                else if (st === 'error')   {
                     stopPoll();
-                    screenSquad(label);
-                } else if (st === 'error') {
-                    stopPoll();
-                    var msg = res.data.message || 'Erro desconhecido';
                     var box = $('fc-dl-screen-squad').querySelector('.fc-dl-center-box');
                     if (box) {
-                        var errEl = document.createElement('p');
-                        errEl.className   = 'fc-dl-error';
-                        errEl.textContent = 'Erro no scrape: ' + msg;
-                        box.appendChild(errEl);
+                        var el = document.createElement('p');
+                        el.className   = 'fc-dl-err-msg';
+                        el.textContent = 'Erro: ' + (res.data.message || 'desconhecido');
+                        box.appendChild(el);
                     }
                 }
             });
@@ -264,97 +225,107 @@
     }
 
     /* ══════════════════════════════════════════════════════════
-       TELA 3 — DME Players (paginado)
+       TELA 3 — DME Players (todos, sem paginação)
     ══════════════════════════════════════════════════════════ */
-    function screenDme(page) {
+    function screenDme() {
         setLoading('Carregando DME Players...');
 
-        ajax('fc_dl_get_dme_items', { page: page, per_page: 12 }).then(function (res) {
-            $('fc-dl-loading').style.display = 'none';
-
+        ajax('fc_dl_get_dme_items', {}).then(function (res) {
             if (!res.success) {
-                renderError('fc-dl-screen-dme', res.data && res.data.message);
-                show('fc-dl-screen-dme');
+                $('fc-dl-screen-dme').innerHTML = errorHtml(res.data && res.data.message);
+                showScreen('fc-dl-screen-dme');
                 return;
             }
-
             renderDme(res.data);
-            show('fc-dl-screen-dme');
+            showScreen('fc-dl-screen-dme');
         }).catch(function () {
-            renderError('fc-dl-screen-dme', 'Falha de conexão.');
-            $('fc-dl-loading').style.display = 'none';
-            show('fc-dl-screen-dme');
+            $('fc-dl-screen-dme').innerHTML = errorHtml('Falha de conexão.');
+            showScreen('fc-dl-screen-dme');
         });
     }
 
     function renderDme(data) {
-        var page       = data.page;
-        var totalPages = data.total_pages;
-        var total      = data.total;
-        var players    = data.players;
+        var players = data.players;
+        var total   = data.total;
 
         var html = tabs('dme');
 
         html += '<div class="fc-dl-topbar">';
-        html += '<h2>DME Players <span class="fc-dl-count">' + total + ' jogadores</span></h2>';
-        html += '<div class="fc-dl-topbar-actions">';
-        html += '<button class="fc-dl-btn fc-dl-btn-secondary" onclick="fcdlToggleAllDme()">☑ Selecionar Todos</button>';
-        html += '<button class="fc-dl-btn fc-dl-btn-primary"   onclick="fcdlGenDmePng()">🖼 Gerar PNG</button>';
-        html += '</div></div>';
+        html += '<h2>DME Players <span class="fc-dl-count">' + total + '</span></h2>';
+        html += '<button class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlToggleAllDme()">☑ Todos</button>';
+        html += '</div>';
 
-        // Grid de cards
+        if (!players || !players.length) {
+            html += '<div class="fc-dl-center-box"><p>Nenhum jogador DME disponível no momento.</p></div>';
+            $('fc-dl-screen-dme').innerHTML = html;
+            return;
+        }
+
         html += '<div class="fc-dl-players-grid">';
         players.forEach(function (p) {
             html += '<label class="fc-dl-player-wrap">'
                   + '<input type="checkbox" class="fc-dl-dme-chk"'
                   + ' data-global-idx="' + p.global_idx + '"'
                   + ' data-name="' + esc(p.name) + '">'
-                  + '<div class="fc-dl-player-card-shell">' + p.card_html + '</div>'
+                  + '<div class="fc-dl-card-shell">' + p.card_html + '</div>'
                   + '<span class="fc-dl-player-label">' + esc(p.name) + '</span>'
                   + '</label>';
         });
-
-        if (!players.length) {
-            html += '<p style="color:#64748b;">Nenhum jogador DME disponível no momento.</p>';
-        }
-
         html += '</div>';
 
-        // Paginação
-        if (totalPages > 1) {
-            html += '<div class="fc-dl-pagination">';
-            if (page > 1) {
-                html += '<a class="fc-dl-btn fc-dl-btn-secondary fc-dl-page-btn" href="#dme-' + (page - 1) + '">← Anterior</a>';
-            } else {
-                html += '<span class="fc-dl-btn fc-dl-btn-secondary fc-dl-page-btn fc-dl-page-btn--disabled">← Anterior</span>';
-            }
-            html += '<span class="fc-dl-page-info">' + page + ' / ' + totalPages + '</span>';
-            if (page < totalPages) {
-                html += '<a class="fc-dl-btn fc-dl-btn-secondary fc-dl-page-btn" href="#dme-' + (page + 1) + '">Próxima →</a>';
-            } else {
-                html += '<span class="fc-dl-btn fc-dl-btn-secondary fc-dl-page-btn fc-dl-page-btn--disabled">Próxima →</span>';
-            }
-            html += '</div>';
-        }
-
         $('fc-dl-screen-dme').innerHTML = html;
+
+        // Barra de seleção sticky — ouve mudanças nos checkboxes
+        $('fc-dl-screen-dme').addEventListener('change', function (e) {
+            if (e.target.classList.contains('fc-dl-dme-chk')) {
+                updateDmeSelBar();
+            }
+        });
+    }
+
+    /* ── Barra de seleção sticky (DME) ──────────────────────── */
+    function ensureDmeSelBar() {
+        if ($('fc-dl-dme-selbar')) return;
+        var bar = document.createElement('div');
+        bar.id        = 'fc-dl-dme-selbar';
+        bar.className = 'fc-dl-selbar';
+        bar.style.display = 'none';
+        bar.innerHTML = '<span class="fc-dl-selbar-info">'
+            + '<strong class="fc-dl-selbar-count">0</strong> selecionado(s)'
+            + '</span>'
+            + '<div class="fc-dl-selbar-actions">'
+            + '<button class="fc-dl-btn fc-dl-btn-ghost fc-dl-selbar-clear" onclick="fcdlClearDme()">Limpar</button>'
+            + '<button class="fc-dl-btn fc-dl-btn-primary" id="fc-dl-dme-gen-btn" onclick="fcdlGenDmePng()">🖼 Gerar PNG</button>'
+            + '</div>';
+        document.body.appendChild(bar);
+    }
+
+    function updateDmeSelBar() {
+        ensureDmeSelBar();
+        var checked = document.querySelectorAll('.fc-dl-dme-chk:checked');
+        var bar     = $('fc-dl-dme-selbar');
+        if (!bar) return;
+
+        if (checked.length > 0) {
+            bar.querySelector('.fc-dl-selbar-count').textContent = checked.length;
+            bar.style.display = 'flex';
+        } else {
+            bar.style.display = 'none';
+        }
     }
 
     /* ══════════════════════════════════════════════════════════
-       Ações globais (chamadas via onclick inline)
+       Ações globais
     ══════════════════════════════════════════════════════════ */
 
-    /* Atualiza grid de squads */
     window.fcdlRefresh = function () {
         state.squads = null;
-        location.hash = 'squads';
+        location.hash = '#squads';
         if (location.hash === '#squads') screenGrid();
     };
 
-    /* Dispara scrape de squad */
     window.fcdlLoad = function (label) {
         var squad = state.squads && state.squads.find(function (s) { return s.label === label; });
-
         if (!squad) {
             ajax('fc_dl_get_squads', {}).then(function (res) {
                 if (!res.success) return;
@@ -370,45 +341,44 @@
     function triggerScrape(label, url) {
         renderScraping(label, { current: 0, total: 0, player: '' });
         ajax('fc_dl_run_scrape', { label: label, url: url }).then(function (res) {
-            if (res.success) {
-                startPoll(label);
-            } else {
-                var errBox = document.createElement('p');
-                errBox.className = 'fc-dl-error';
-                errBox.textContent = 'Erro: ' + (res.data && res.data.message);
-                $('fc-dl-screen-squad').appendChild(errBox);
+            if (res.success) startPoll(label);
+            else {
+                var el = document.createElement('p');
+                el.className = 'fc-dl-err-msg';
+                el.textContent = 'Erro: ' + (res.data && res.data.message);
+                $('fc-dl-screen-squad').appendChild(el);
             }
         });
     }
 
-    /* Squads: selecionar / deselecionar todos */
     window.fcdlToggleAll = function () {
-        var checks = document.querySelectorAll('.fc-dl-chk');
+        var checks     = document.querySelectorAll('.fc-dl-chk');
         var allChecked = Array.from(checks).every(function (c) { return c.checked; });
         checks.forEach(function (c) { c.checked = !allChecked; });
     };
 
-    /* DME: selecionar / deselecionar todos */
     window.fcdlToggleAllDme = function () {
-        var checks = document.querySelectorAll('.fc-dl-dme-chk');
+        var checks     = document.querySelectorAll('.fc-dl-dme-chk');
         var allChecked = Array.from(checks).every(function (c) { return c.checked; });
         checks.forEach(function (c) { c.checked = !allChecked; });
+        updateDmeSelBar();
     };
 
-    /* Squads: gerar PNG ──────────────────────────────────── */
+    window.fcdlClearDme = function () {
+        document.querySelectorAll('.fc-dl-dme-chk').forEach(function (c) { c.checked = false; });
+        updateDmeSelBar();
+    };
+
+    /* Squads → gerar PNG */
     window.fcdlGenPng = function () {
         var checks  = document.querySelectorAll('.fc-dl-chk:checked');
         var indices = Array.from(checks).map(function (c) { return c.dataset.idx; });
-
-        if (!indices.length) {
-            alert('Selecione ao menos um jogador.');
-            return;
-        }
+        if (!indices.length) { alert('Selecione ao menos um jogador.'); return; }
 
         var label = location.hash.replace('#squad-', '').replace('#', '');
         if (!label) { alert('Squad não identificado.'); return; }
 
-        var btn = document.querySelector('[onclick="fcdlGenPng()"]');
+        var btn = $('fc-dl-gen-squad-btn');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
 
         var fd = new FormData();
@@ -421,11 +391,8 @@
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (btn) { btn.disabled = false; btn.textContent = '🖼 Gerar PNG'; }
-                if (!res.success) {
-                    alert('Erro: ' + (res.data && res.data.message || 'desconhecido'));
-                    return;
-                }
-                triggerDownload(res.data, 'fc-dl-download-btn', '[onclick="fcdlGenPng()"]');
+                if (!res.success) { alert('Erro: ' + (res.data && res.data.message || 'desconhecido')); return; }
+                triggerDownload(res.data, 'fc-dl-squad-dl-btn', btn);
             })
             .catch(function (err) {
                 if (btn) { btn.disabled = false; btn.textContent = '🖼 Gerar PNG'; }
@@ -433,17 +400,13 @@
             });
     };
 
-    /* DME: gerar PNG ─────────────────────────────────────── */
+    /* DME → gerar PNG */
     window.fcdlGenDmePng = function () {
         var checks  = document.querySelectorAll('.fc-dl-dme-chk:checked');
         var indices = Array.from(checks).map(function (c) { return c.dataset.globalIdx; });
+        if (!indices.length) { alert('Selecione ao menos um jogador.'); return; }
 
-        if (!indices.length) {
-            alert('Selecione ao menos um jogador.');
-            return;
-        }
-
-        var btn = document.querySelector('[onclick="fcdlGenDmePng()"]');
+        var btn = $('fc-dl-dme-gen-btn');
         if (btn) { btn.disabled = true; btn.textContent = '⏳ Gerando...'; }
 
         var fd = new FormData();
@@ -455,11 +418,8 @@
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (btn) { btn.disabled = false; btn.textContent = '🖼 Gerar PNG'; }
-                if (!res.success) {
-                    alert('Erro: ' + (res.data && res.data.message || 'desconhecido'));
-                    return;
-                }
-                triggerDownload(res.data, 'fc-dl-dme-download-btn', '[onclick="fcdlGenDmePng()"]');
+                if (!res.success) { alert('Erro: ' + (res.data && res.data.message || 'desconhecido')); return; }
+                triggerDownload(res.data, 'fc-dl-dme-dl-btn', btn);
             })
             .catch(function (err) {
                 if (btn) { btn.disabled = false; btn.textContent = '🖼 Gerar PNG'; }
@@ -467,61 +427,45 @@
             });
     };
 
-    /* ── Helper compartilhado: dispara download + botão persistente */
-    function triggerDownload(data, btnId, actionSelector) {
+    /* Download helper */
+    function triggerDownload(data, dlBtnId, nearBtn) {
         var isPng  = data.type === 'png';
         var sizeKB = Math.round(data.size / 1024);
-        var label  = isPng
-            ? '⬇ Baixar PNG (' + sizeKB + ' KB)'
-            : '⬇ Baixar ZIP (' + sizeKB + ' KB)';
+        var label  = (isPng ? '⬇ PNG' : '⬇ ZIP') + ' (' + sizeKB + ' KB)';
 
-        // Dispara download automaticamente
-        var trigger = document.createElement('a');
-        trigger.href     = data.url;
-        trigger.download = data.filename;
-        trigger.style.display = 'none';
-        document.body.appendChild(trigger);
-        trigger.click();
-        setTimeout(function () { document.body.removeChild(trigger); }, 200);
+        var a = document.createElement('a');
+        a.href = data.url; a.download = data.filename;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { document.body.removeChild(a); }, 200);
 
-        // Mantém botão de re-download
-        var existing = document.getElementById(btnId);
+        // Botão de re-download ao lado do botão de geração
+        var existing = document.getElementById(dlBtnId);
         if (existing) existing.remove();
 
         var dlBtn = document.createElement('a');
-        dlBtn.id          = btnId;
+        dlBtn.id          = dlBtnId;
         dlBtn.href        = data.url;
         dlBtn.download    = data.filename;
         dlBtn.className   = 'fc-dl-btn fc-dl-btn-success';
         dlBtn.textContent = label;
-        dlBtn.style.marginLeft = '8px';
 
-        var actionsBar = document.querySelector(actionSelector);
-        actionsBar = actionsBar
-            ? actionsBar.closest('.fc-dl-topbar-actions')
-            : null;
-
-        if (!actionsBar) {
-            // fallback: qualquer topbar-actions visível
-            actionsBar = document.querySelector('.fc-dl-topbar-actions');
+        if (nearBtn && nearBtn.parentNode) {
+            nearBtn.parentNode.insertBefore(dlBtn, nearBtn.nextSibling);
         }
-
-        if (actionsBar) actionsBar.appendChild(dlBtn);
     }
 
-    /* ── Utils ───────────────────────────────────────────────── */
+    /* Utils */
     function esc(str) {
         if (!str) return '';
         return String(str)
-            .replace(/&/g,  '&amp;')
-            .replace(/</g,  '&lt;')
-            .replace(/>/g,  '&gt;')
-            .replace(/"/g,  '&quot;')
-            .replace(/'/g,  '&#39;');
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    function renderError(screenId, msg) {
-        $(screenId).innerHTML = '<p class="fc-dl-error">' + esc(msg || 'Erro desconhecido') + '</p>';
+    function errorHtml(msg) {
+        return '<div class="fc-dl-err-msg">' + esc(msg || 'Erro desconhecido') + '</div>';
     }
 
 })();
