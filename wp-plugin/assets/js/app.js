@@ -476,7 +476,6 @@
         return '<div class="fc-dl-err-msg">' + esc(msg || 'Erro desconhecido') + '</div>';
     }
 
-})();
 
     /* ══════════════════════════════════════════════════════════
        TELA 4 — CRIAÇÃO DE POST
@@ -980,3 +979,4 @@
         pcRedraw();
     };
 
+})();
