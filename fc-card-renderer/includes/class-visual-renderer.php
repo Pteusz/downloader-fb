@@ -119,11 +119,12 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
             </div>
 
             <div class="fc-card-icons-footer">
-                <?php if (!empty($normalized['info']['nation']['icon'])): ?>
-                    <img src="<?php echo esc_url($normalized['info']['nation']['icon']); ?>"
-                         alt="<?php echo esc_attr($normalized['info']['nation']['name']); ?>"
-                         class="fc-icon fc-icon-nation"
-                         title="<?php echo esc_attr($normalized['info']['nation']['name']); ?>">
+                <?php /* Ordem original EA FC: liga → clube → nação (esquerda p/ direita) */ ?>
+                <?php if (!empty($normalized['info']['league']['icon'])): ?>
+                    <img src="<?php echo esc_url($normalized['info']['league']['icon']); ?>"
+                         alt="<?php echo esc_attr($normalized['info']['league']['name']); ?>"
+                         class="fc-icon fc-icon-league"
+                         title="<?php echo esc_attr($normalized['info']['league']['name']); ?>">
                 <?php endif; ?>
 
                 <?php if (!empty($normalized['info']['club']['icon'])): ?>
@@ -133,11 +134,11 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
                          title="<?php echo esc_attr($normalized['info']['club']['name']); ?>">
                 <?php endif; ?>
 
-                <?php if (!empty($normalized['info']['league']['icon'])): ?>
-                    <img src="<?php echo esc_url($normalized['info']['league']['icon']); ?>"
-                         alt="<?php echo esc_attr($normalized['info']['league']['name']); ?>"
-                         class="fc-icon fc-icon-league"
-                         title="<?php echo esc_attr($normalized['info']['league']['name']); ?>">
+                <?php if (!empty($normalized['info']['nation']['icon'])): ?>
+                    <img src="<?php echo esc_url($normalized['info']['nation']['icon']); ?>"
+                         alt="<?php echo esc_attr($normalized['info']['nation']['name']); ?>"
+                         class="fc-icon fc-icon-nation"
+                         title="<?php echo esc_attr($normalized['info']['nation']['name']); ?>">
                 <?php endif; ?>
             </div>
         </div>
@@ -462,6 +463,13 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
             return '';
         }
 
+        // Fallback: se o alt_sidebar não tiver as chaves de cor esperadas,
+        // usa o extra_info_css_vars — ambos hexágonos devem ter a mesma cor do card
+        $has_alt_colors = !empty($css_vars['alt-pos-background']) || !empty($css_vars['extra-info-bg']);
+        if (!$has_alt_colors) {
+            $css_vars = $normalized['extra_info_css_vars'] ?? array();
+        }
+
         $svg = self::generate_hexagon_svg($positions, $css_vars);
 
         ob_start();
@@ -487,8 +495,9 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
         // hex "vertical regular" (slants ~30°)
         $tip_height = $width * 0.289;
 
-        $bg_color = $css_vars['alt-pos-background'] ?? '#6b4d29';
-        $border_color = $css_vars['alt-pos-border'] ?? '#ffffff';
+        // Aceita tanto 'alt-pos-*' (chaves do renderer) quanto 'extra-info-*' (chaves do scraper)
+        $bg_color     = $css_vars['alt-pos-background'] ?? $css_vars['extra-info-bg']     ?? '#6b4d29';
+        $border_color = $css_vars['alt-pos-border']     ?? $css_vars['extra-info-border'] ?? '#ffffff';
 
         // espessura real da borda (em unidades do viewBox)
         $border = 2.5;
@@ -1040,6 +1049,7 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
         @media (max-width: 768px) {
             .fc-card-rating { font-size: 1.8em; }
             .fc-card-position { font-size: 0.7em; }
+            .fc-card-role-plus { font-size: 0.55em; } /* mantém hierarquia em tablet */
             .fc-card-player-name {font-size: 1em; top:63%; }
             .fc-card-stat { font-size: 0.5em; }
             .fc-stat-label {
@@ -1060,8 +1070,11 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
 .fc-card-rating-position{ top: 23%; left: 17%;}
 .fc-playstyle-svg svg{width: 78%;}
 .fc-card-playstyles{gap: 1%;    left: 1%;}
-            .fc-card-rating { font-size: 0.9em; }
-            .fc-card-position { font-size: 0.5em; }
+            /* Fix hierarquia para PNG (Puppeteer a 290px viewport < 480px):
+               rating precisa dominar, role-plus deve ser menor que position */
+            .fc-card-rating { font-size: 1.4em; }   /* era 0.9em — muito comprimido */
+            .fc-card-position { font-size: 0.6em; }  /* era 0.5em — muito pequeno */
+            .fc-card-role-plus { font-size: 0.45em; } /* sem override = 0.65em > position: errado */
             .fc-card-player-name { font-size: 1em; top:63%;    text-shadow: 1px 1px 2px rgb(0 0 0 / 4%); }
             .fc-card-stat { font-size: 0.5em; text-shadow: 1px 1px 2px rgb(0 0 0 / 4%);}
             .fc-card-stats-grid{gap:3%; top:71%;}
