@@ -503,7 +503,7 @@
         pinchW0:     0,
         pinchH0:     0,
         history:     [],     // undo stack (máx 20)
-        withWrapper: false,  // toggle no sheet
+        withWrapper: true,   // toggle no sheet — padrão = 'Com info' (coincide com o botão active no HTML)
         dmeItems:    null,   // cache dos players DME
         fontReady:   false,
     };
