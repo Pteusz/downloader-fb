@@ -86,7 +86,7 @@
             + '<div class="fc-dl-topbar">'
             + '<h2>Squads</h2>'
             + '<div class="fc-dl-topbar-right">'
-            + '<button class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlRefresh()">↻ Atualizar</button>'
+            + '<button id="fc-dl-refresh-btn" class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlRefresh()">↻ Atualizar</button>'
             + '</div></div>'
             + '<div class="fc-dl-squad-grid">';
 
@@ -330,9 +330,24 @@
        Ações globais
     ══════════════════════════════════════════════════════════ */
     window.fcdlRefresh = function () {
-        state.squads = null;
-        location.hash = '#squads';
-        if (location.hash === '#squads') screenGrid();
+        var btn = document.getElementById('fc-dl-refresh-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Buscando...'; }
+
+        ajax('fc_dl_refresh_squads', {}).then(function (res) {
+            if (btn) { btn.disabled = false; btn.textContent = '↻ Atualizar'; }
+            if (!res.success) {
+                alert('Erro ao atualizar squads: ' + (res.data && res.data.message || '?'));
+                return;
+            }
+            state.squads = res.data;
+            renderGrid(res.data);
+            showScreen('fc-dl-screen-grid');
+        }).catch(function () {
+            if (btn) { btn.disabled = false; btn.textContent = '↻ Atualizar'; }
+            // fallback: relê o índice existente sem discovery
+            state.squads = null;
+            screenGrid();
+        });
     };
 
     window.fcdlLoad = function (label) {

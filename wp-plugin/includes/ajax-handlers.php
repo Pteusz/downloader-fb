@@ -246,6 +246,36 @@ function fc_dl_ajax_get_dme_items() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   fc_dl_refresh_squads
+   Dispara a descoberta de squads novos na VPS e retorna o índice atualizado.
+   ═══════════════════════════════════════════════════════════════ */
+add_action( 'wp_ajax_fc_dl_refresh_squads',        'fc_dl_ajax_refresh_squads' );
+add_action( 'wp_ajax_nopriv_fc_dl_refresh_squads', 'fc_dl_ajax_refresh_squads' );
+
+function fc_dl_ajax_refresh_squads() {
+    fc_dl_verify();
+    set_time_limit( 120 );
+
+    $result = FC_DL_VPS_Api::refresh_squads();
+    if ( ! $result ) {
+        wp_send_json_error( [ 'message' => 'Erro ao buscar squads na VPS' ] );
+    }
+
+    // Enriquece cada squad com status loaded/total (mesmo que fc_dl_get_squads)
+    $squads = $result['squads'] ?? [];
+    foreach ( $squads as &$squad ) {
+        $label           = FC_DL_VPS_Api::label_from_url( $squad['url'] );
+        $squad['label']  = $label;
+        $data            = FC_DL_VPS_Api::get_squad( $label );
+        $squad['loaded'] = ( $data !== null && empty( $data['error'] ) );
+        $squad['total']  = $squad['loaded'] ? ( $data['meta']['total'] ?? 0 ) : 0;
+    }
+    unset( $squad );
+
+    wp_send_json_success( $squads );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    fc_dl_generate_dme_png
    Índices = posição no array players-only (mesmo filtro acima)
    ═══════════════════════════════════════════════════════════════ */

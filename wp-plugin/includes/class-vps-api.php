@@ -49,6 +49,18 @@ class FC_DL_VPS_Api {
         return json_decode( wp_remote_retrieve_body( $res ), true );
     }
 
+    /* ── POST /refresh-squads ───────────────────────────────── */
+    public static function refresh_squads() {
+        $res = wp_remote_post( FC_DL_API_BASE . '/refresh-squads', [
+            'timeout' => 90,
+            'headers' => [ 'Content-Type' => 'application/json' ],
+            'body'    => '{}',
+        ] );
+        if ( is_wp_error( $res ) ) return false;
+        if ( wp_remote_retrieve_response_code( $res ) !== 200 ) return false;
+        return json_decode( wp_remote_retrieve_body( $res ), true );
+    }
+
     /* ── helpers ─────────────────────────────────────────────── */
     public static function label_from_url( string $url ): string {
         return basename( rtrim( $url, '/' ) );

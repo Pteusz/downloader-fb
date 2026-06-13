@@ -138,11 +138,56 @@ def run_scraper(label: str, url: str) -> None:
 
 class Handler(BaseHTTPRequestHandler):
 
-    # ── POST /run-scrape ─────────────────────────────────────
+    # ── POST /run-scrape | /refresh-squads ──────────────────
     def do_POST(self):
-        if self.path != "/run-scrape":
-            return self.reply(404, {"error": "not found"})
+        if   self.path == "/run-scrape":
+            self._handle_run_scrape()
+        elif self.path == "/refresh-squads":
+            self._handle_refresh_squads()
+        else:
+            self.reply(404, {"error": "not found"})
 
+    def _handle_refresh_squads(self):
+        """
+        Dispara o módulo squads_list de forma síncrona e devolve
+        o squads_index.json atualizado.
+        """
+        cmd = [
+            "docker", "compose",
+            "-f", os.path.join(COMPOSE_DIR, "docker-compose.yml"),
+            "run", "--rm", "scraper",
+            "python", "runner.py",
+            "--module", "squads_list",
+            "--url",    "https://www.futbin.com/26/squads",
+            "--ajax",   "http://localhost",
+            "--nonce",  "local",
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=90,
+                cwd=COMPOSE_DIR,
+            )
+            if proc.returncode != 0:
+                snippet = (proc.stdout + proc.stderr)[-600:]
+                return self.reply(500, {"error": "scraper_failed", "detail": snippet})
+
+            index_path = os.path.join(DATA_DIR, "squads_index.json")
+            squads = []
+            if os.path.exists(index_path):
+                with open(index_path, encoding="utf-8") as fh:
+                    squads = json.load(fh)
+
+            self.reply(200, {"status": "ok", "squads": squads, "total": len(squads)})
+
+        except subprocess.TimeoutExpired:
+            self.reply(504, {"error": "timeout"})
+        except Exception as exc:
+            self.reply(500, {"error": str(exc)})
+
+    def _handle_run_scrape(self):
         try:
             n    = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(n))
