@@ -471,3 +471,315 @@
     .fc-dl-dme-card-footer { font-size: 0.66em; padding: 6px 10px; }
     .fc-dl-player-wrap:has(.fc-dl-dme-card)::after { top: 5px; right: 5px; }
 }
+
+/* ══════════════════════════════════════════════════════
+   CRIAÇÃO DE POST — canvas editor mobile-first
+   ══════════════════════════════════════════════════════ */
+
+#fc-dl-screen-post {
+    padding: 0;          /* override do #fc-dl-app — canvas vai edge-to-edge */
+    margin: 0 -16px;     /* cancela padding lateral do app */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ── Top bar ─────────────────────────────────────────── */
+.fc-post-topbar {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 8px;
+    border-bottom: 1px solid var(--clr-border);
+    background: var(--clr-surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    flex-shrink: 0;
+}
+.fc-post-title {
+    flex: 1;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9em;
+    color: var(--clr-text);
+}
+
+/* ── Canvas ──────────────────────────────────────────── */
+.fc-post-canvas-wrap {
+    position: relative;
+    width: 100%;
+    background: #000;
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+}
+.fc-post-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;   /* CRÍTICO: impede scroll/zoom do browser durante drag */
+    cursor: crosshair;
+}
+.fc-post-canvas-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}
+
+/* ── Toolbar inferior ────────────────────────────────── */
+.fc-post-toolbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 10px 12px;
+    background: rgba(13,13,13,0.97);
+    border-top: 1px solid var(--clr-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 20;
+    gap: 6px;
+}
+.fc-post-tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 10px;
+    color: var(--clr-text);
+    font-size: 0.72em;
+    font-weight: 600;
+    padding: 8px 10px;
+    cursor: pointer;
+    gap: 3px;
+    min-width: 56px;
+    transition: background 0.12s, border-color 0.12s, transform 0.1s;
+    white-space: nowrap;
+}
+.fc-post-tool-btn:active {
+    background: var(--clr-orange);
+    border-color: var(--clr-orange);
+    color: #fff;
+    transform: scale(0.93);
+}
+.fc-post-tool-btn.danger {
+    border-color: rgba(239,68,68,.4);
+    color: var(--clr-red);
+}
+.fc-post-tool-btn.danger:active {
+    background: var(--clr-red);
+    border-color: var(--clr-red);
+}
+
+/* ── Bottom sheet overlay ────────────────────────────── */
+.fc-post-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 97;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+.fc-post-sheet-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* ── Bottom sheet ────────────────────────────────────── */
+.fc-post-sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--clr-surface);
+    border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--clr-border);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    z-index: 98;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+}
+.fc-post-sheet.open { transform: translateY(0); }
+
+.fc-post-sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--clr-border);
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+}
+.fc-post-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--clr-border);
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.88em;
+}
+
+/* Toggle com/sem wrapper */
+.fc-post-wrap-toggle {
+    display: flex;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.fc-post-wrap-btn {
+    padding: 5px 10px;
+    font-size: 0.72em;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    color: var(--clr-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.fc-post-wrap-btn.active {
+    background: var(--clr-orange);
+    color: #fff;
+}
+
+/* Lista de cards na sheet */
+.fc-post-sheet-list {
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+}
+.fc-post-card-row {
+    display: flex;
+    align-items: center;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--clr-border);
+    cursor: pointer;
+    gap: 10px;
+    transition: background 0.12s;
+}
+.fc-post-card-row:active { background: var(--clr-surface2); }
+.fc-post-card-row-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+.fc-post-card-rating {
+    font-weight: 800;
+    font-size: 1em;
+    color: var(--clr-orange);
+    min-width: 30px;
+    flex-shrink: 0;
+}
+.fc-post-card-pos {
+    font-size: 0.68em;
+    font-weight: 700;
+    color: var(--clr-muted);
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    padding: 2px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.fc-post-card-name {
+    font-weight: 600;
+    font-size: 0.85em;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fc-post-card-add-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--clr-orange);
+    border: none;
+    color: #fff;
+    font-size: 1.4em;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+    pointer-events: none; /* o clique é capturado pelo row */
+}
+
+/* ── Painel de texto ─────────────────────────────────── */
+.fc-post-text-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--clr-surface);
+    border-top: 1px solid var(--clr-border);
+    border-radius: 20px 20px 0 0;
+    padding: 16px 16px 24px;
+    z-index: 98;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+}
+.fc-post-text-panel.open { transform: translateY(0); }
+
+.fc-post-text-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.fc-post-text-field {
+    width: 100%;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 8px;
+    padding: 11px 12px;
+    color: var(--clr-text);
+    font-size: 0.9em;
+    font-family: 'Montserrat', sans-serif;
+    box-sizing: border-box;
+    caret-color: var(--clr-orange);
+}
+.fc-post-text-field:focus {
+    outline: none;
+    border-color: var(--clr-orange);
+}
+.fc-post-text-options {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.fc-post-select {
+    flex: 1;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--clr-text);
+    font-size: 0.78em;
+    cursor: pointer;
+    -webkit-appearance: none;
+}
+.fc-post-color-pick {
+    width: 44px; height: 40px;
+    border: 1px solid var(--clr-border);
+    border-radius: 8px;
+    background: var(--clr-surface2);
+    cursor: pointer;
+    padding: 3px;
+    flex-shrink: 0;
+}
+.fc-post-text-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}

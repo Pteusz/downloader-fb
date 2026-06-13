@@ -19,6 +19,7 @@
         $('fc-dl-screen-grid').style.display  = 'none';
         $('fc-dl-screen-squad').style.display = 'none';
         $('fc-dl-screen-dme').style.display   = 'none';
+        $('fc-dl-screen-post').style.display  = 'none';
         $('fc-dl-loading').style.display      = 'flex';
         var p = $('fc-dl-loading').querySelector('p');
         if (p) p.textContent = msg || 'Carregando...';
@@ -45,6 +46,9 @@
             + '<a class="fc-dl-tab' + (active === 'dme' ? ' active' : '') + '" href="#dme">'
             + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
             + 'DME Players</a>'
+            + '<a class="fc-dl-tab' + (active === 'post' ? ' active' : '') + '" href="#post">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>'
+            + 'Criar Post</a>'
             + '</div>';
     }
 
@@ -54,9 +58,11 @@
     function route() {
         stopPoll();
         var hash = location.hash.replace('#', '') || 'squads';
+        postCleanup();
         if      (hash === 'squads')              screenGrid();
         else if (hash.indexOf('squad-') === 0)   screenSquad(hash.slice(6));
         else if (hash === 'dme')                 screenDme();
+        else if (hash === 'post')                screenPost();
     }
 
     window.addEventListener('hashchange', route);
@@ -471,3 +477,506 @@
     }
 
 })();
+
+    /* ══════════════════════════════════════════════════════════
+       TELA 4 — CRIAÇÃO DE POST
+       Canvas HTML5 mobile-first:
+         - Fundo: imagem base (default ou upload do usuário)
+         - Elementos: PNGs dos cards DME + textos Montserrat
+         - Touch: drag (1 dedo) + pinch-to-resize (2 dedos)
+         - Export: canvas.toDataURL() → download direto (Fase 2)
+    ══════════════════════════════════════════════════════════ */
+
+    var POST_BG_DEFAULT = 'https://chamacoins.com.br/wp-content/uploads/2026/06/ChatGPT-Image-13-de-jun.-de-2026-16_54_23-1.png';
+    var POST_W = 941;
+    var POST_H = 1672;
+
+    var PC = {   /* PostCanvas state */
+        el:          null,   // <canvas>
+        ctx:         null,   // CanvasRenderingContext2D
+        elements:    [],     // [{type, img?, text?, x, y, w, h, ...}]
+        selected:    -1,     // índice do elemento selecionado
+        dragging:    false,
+        dragOffX:    0,
+        dragOffY:    0,
+        pinching:    false,
+        pinchDist0:  0,
+        pinchW0:     0,
+        pinchH0:     0,
+        history:     [],     // undo stack (máx 20)
+        withWrapper: false,  // toggle no sheet
+        dmeItems:    null,   // cache dos players DME
+        fontReady:   false,
+    };
+
+    /* ── Tela principal ──────────────────────────────────────── */
+    function screenPost() {
+        // Remove padding do app container para canvas edge-to-edge
+        var appEl = document.getElementById('fc-dl-app');
+        if (appEl) appEl.dataset.prevPad = appEl.style.padding || '';
+
+        setLoading('Preparando editor...');
+
+        // Carrega items DME se ainda não tiver em cache
+        if (PC.dmeItems) {
+            renderPostScreen();
+        } else {
+            ajax('fc_dl_get_dme_items', {}).then(function(res) {
+                PC.dmeItems = res.success
+                    ? (res.data.items || []).filter(function(i) { return i.type === 'player'; })
+                    : [];
+                renderPostScreen();
+            }).catch(function() {
+                PC.dmeItems = [];
+                renderPostScreen();
+            });
+        }
+    }
+
+    function renderPostScreen() {
+        var s = $('fc-dl-screen-post');
+
+        s.innerHTML =
+            /* Top bar */
+            '<div class="fc-post-topbar">' +
+                '<a class="fc-dl-back" href="#squads" style="min-width:48px;">← Voltar</a>' +
+                '<span class="fc-post-title">Criar Post</span>' +
+                '<button class="fc-dl-btn fc-dl-btn-ghost" style="padding:6px 10px;font-size:0.8em;" onclick="window.pcUndo()">↩ Desfazer</button>' +
+            '</div>' +
+
+            /* Canvas */
+            '<div class="fc-post-canvas-wrap">' +
+                '<canvas id="fc-post-cv" class="fc-post-canvas"></canvas>' +
+                '<div id="fc-post-load" class="fc-post-canvas-loading" style="display:none;">' +
+                    '<div class="fc-dl-spinner"></div>' +
+                '</div>' +
+            '</div>' +
+
+            /* Toolbar inferior */
+            '<div class="fc-post-toolbar">' +
+                '<button class="fc-post-tool-btn" onclick="window.pcOpenCardSheet()">' +
+                    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' +
+                    'Card' +
+                '</button>' +
+                '<button class="fc-post-tool-btn" onclick="window.pcOpenText()">' +
+                    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>' +
+                    'Texto' +
+                '</button>' +
+                '<button class="fc-post-tool-btn" onclick="window.pcChangeBg()">' +
+                    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
+                    'Fundo' +
+                '</button>' +
+                '<button class="fc-post-tool-btn danger" id="pc-del-btn" onclick="window.pcDeleteSelected()" style="display:none;">' +
+                    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>' +
+                    'Deletar' +
+                '</button>' +
+            '</div>' +
+
+            /* Input de arquivo para BG (hidden) */
+            '<input type="file" id="pc-bg-file" accept="image/*" style="display:none;">' +
+
+            /* Overlay do sheet */
+            '<div id="pc-sheet-overlay" class="fc-post-sheet-overlay" onclick="window.pcCloseSheet()"></div>' +
+
+            /* Bottom sheet — picker de cards */
+            '<div id="pc-card-sheet" class="fc-post-sheet">' +
+                '<div class="fc-post-sheet-handle"></div>' +
+                '<div class="fc-post-sheet-header">' +
+                    '<span>Escolher Card</span>' +
+                    '<div class="fc-post-wrap-toggle">' +
+                        '<button class="fc-post-wrap-btn" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
+                        '<button class="fc-post-wrap-btn active" id="pc-wrap-on" onclick="window.pcSetWrapper(true)">Com info</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="fc-post-sheet-list">' + buildCardList() + '</div>' +
+            '</div>' +
+
+            /* Painel de texto */
+            '<div id="pc-text-panel" class="fc-post-text-panel">' +
+                '<div class="fc-post-text-controls">' +
+                    '<input type="text" id="pc-txt" class="fc-post-text-field" placeholder="Digite o texto...">' +
+                    '<div class="fc-post-text-options">' +
+                        '<select id="pc-txt-size" class="fc-post-select">' +
+                            '<option value="36">36</option>' +
+                            '<option value="48">48</option>' +
+                            '<option value="64" selected>64</option>' +
+                            '<option value="80">80</option>' +
+                            '<option value="100">100</option>' +
+                        '</select>' +
+                        '<select id="pc-txt-weight" class="fc-post-select">' +
+                            '<option value="400">Regular</option>' +
+                            '<option value="600">Semi Bold</option>' +
+                            '<option value="700" selected>Bold</option>' +
+                            '<option value="800">Extra Bold</option>' +
+                        '</select>' +
+                        '<input type="color" id="pc-txt-color" value="#ffffff" class="fc-post-color-pick">' +
+                    '</div>' +
+                '</div>' +
+                '<div class="fc-post-text-actions">' +
+                    '<button class="fc-dl-btn fc-dl-btn-ghost" onclick="window.pcCloseText()">Cancelar</button>' +
+                    '<button class="fc-dl-btn fc-dl-btn-primary" onclick="window.pcConfirmText()">Adicionar</button>' +
+                '</div>' +
+            '</div>';
+
+        showScreen('fc-dl-screen-post');
+        initPostCanvas($('fc-post-cv'));
+
+        /* Listener no input de BG */
+        $('pc-bg-file').addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) { pcLoadBg(e.target.result); };
+            reader.readAsDataURL(file);
+            this.value = '';
+        });
+    }
+
+    function buildCardList() {
+        if (!PC.dmeItems || !PC.dmeItems.length) {
+            return '<p style="padding:20px 16px;color:var(--clr-muted);font-size:0.85em;">Nenhum card DME disponível.</p>';
+        }
+        return PC.dmeItems.map(function(p) {
+            return '<div class="fc-post-card-row" onclick="window.pcAddCard(' + p.global_idx + ')">' +
+                '<div class="fc-post-card-row-info">' +
+                    '<span class="fc-post-card-rating">' + esc(String(p.rating)) + '</span>' +
+                    '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
+                    '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
+                '</div>' +
+                '<span class="fc-post-card-add-btn">+</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    /* ── Inicialização do canvas ──────────────────────────────── */
+    function initPostCanvas(canvasEl) {
+        PC.el  = canvasEl;
+        PC.ctx = canvasEl.getContext('2d');
+        PC.elements  = [];
+        PC.selected  = -1;
+        PC.history   = [];
+        canvasEl.width  = POST_W;
+        canvasEl.height = POST_H;
+
+        canvasEl.addEventListener('touchstart', pcTouchStart, { passive: false });
+        canvasEl.addEventListener('touchmove',  pcTouchMove,  { passive: false });
+        canvasEl.addEventListener('touchend',   pcTouchEnd,   { passive: false });
+
+        /* Carrega fonte Montserrat para ctx.fillText */
+        if (!PC.fontReady && 'fonts' in document) {
+            Promise.all([
+                document.fonts.load('700 64px Montserrat'),
+                document.fonts.load('800 64px Montserrat'),
+                document.fonts.load('400 64px Montserrat'),
+            ]).then(function() { PC.fontReady = true; });
+        }
+
+        pcLoadBg(POST_BG_DEFAULT);
+    }
+
+    /* ── Limpeza ao sair da tela ─────────────────────────────── */
+    function postCleanup() {
+        if (PC.el) {
+            PC.el.removeEventListener('touchstart', pcTouchStart);
+            PC.el.removeEventListener('touchmove',  pcTouchMove);
+            PC.el.removeEventListener('touchend',   pcTouchEnd);
+            PC.el = null;
+            PC.ctx = null;
+        }
+        /* Restaura padding do app */
+        var appEl = document.getElementById('fc-dl-app');
+        if (appEl && appEl.dataset.prevPad !== undefined) {
+            appEl.style.padding = appEl.dataset.prevPad;
+            delete appEl.dataset.prevPad;
+        }
+    }
+
+    /* ── Utilitários de coordenadas ──────────────────────────── */
+    function pcScale() {
+        if (!PC.el) return 1;
+        return PC.el.getBoundingClientRect().width / POST_W;
+    }
+
+    function pcToCanvas(clientX, clientY) {
+        var rect = PC.el.getBoundingClientRect();
+        var s    = pcScale();
+        return { x: (clientX - rect.left) / s, y: (clientY - rect.top) / s };
+    }
+
+    /* ── Hit test (ordem inversa = elemento do topo primeiro) ─── */
+    function pcHit(x, y) {
+        for (var i = PC.elements.length - 1; i >= 0; i--) {
+            if (PC.elements[i].type === 'bg') continue;
+            var el = PC.elements[i];
+            if (x >= el.x && x <= el.x + el.w && y >= el.y && y <= el.y + el.h) return i;
+        }
+        return -1;
+    }
+
+    /* Testa se toque bateu no handle de deletar (canto sup-dir do selecionado) */
+    function pcHitDelete(x, y) {
+        if (PC.selected < 0) return false;
+        var el = PC.elements[PC.selected];
+        var hx = el.x + el.w, hy = el.y;
+        return Math.sqrt(Math.pow(x - hx, 2) + Math.pow(y - hy, 2)) < 28;
+    }
+
+    /* ── Redraw ──────────────────────────────────────────────── */
+    function pcRedraw() {
+        if (!PC.ctx) return;
+        var ctx = PC.ctx;
+        ctx.clearRect(0, 0, POST_W, POST_H);
+
+        PC.elements.forEach(function(el, i) {
+            if ((el.type === 'bg' || el.type === 'card') && el.img) {
+                ctx.drawImage(el.img, el.x, el.y, el.w, el.h);
+            } else if (el.type === 'text') {
+                ctx.save();
+                ctx.font       = (el.weight || '700') + ' ' + (el.size || 64) + 'px Montserrat,Arial,sans-serif';
+                ctx.fillStyle  = el.color || '#ffffff';
+                ctx.textBaseline = 'top';
+                ctx.shadowColor  = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur   = 12;
+                ctx.fillText(el.text, el.x, el.y);
+                ctx.restore();
+            }
+
+            if (i === PC.selected) {
+                var lw = Math.max(2, 3 / pcScale());
+                ctx.save();
+                ctx.strokeStyle = '#f97316';
+                ctx.lineWidth   = lw;
+                ctx.setLineDash([10 / pcScale(), 5 / pcScale()]);
+                ctx.strokeRect(el.x - 4, el.y - 4, el.w + 8, el.h + 8);
+                ctx.setLineDash([]);
+
+                /* Handle de deletar — círculo vermelho no canto sup-dir */
+                var hx = el.x + el.w, hy = el.y;
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(hx, hy, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle    = '#fff';
+                ctx.font         = 'bold 26px Arial';
+                ctx.textAlign    = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowBlur   = 0;
+                ctx.fillText('\u00d7', hx, hy);
+                ctx.restore();
+            }
+        });
+
+        /* Atualiza botão deletar na toolbar */
+        var delBtn = $('pc-del-btn');
+        if (delBtn) delBtn.style.display = PC.selected >= 0 ? '' : 'none';
+    }
+
+    /* ── Touch handlers ──────────────────────────────────────── */
+    function pcTouchStart(e) {
+        e.preventDefault();
+
+        if (e.touches.length === 1) {
+            var t   = e.touches[0];
+            var pos = pcToCanvas(t.clientX, t.clientY);
+
+            if (pcHitDelete(pos.x, pos.y)) {
+                pcPushHistory();
+                PC.elements.splice(PC.selected, 1);
+                PC.selected = -1;
+                pcRedraw();
+                return;
+            }
+
+            var hit = pcHit(pos.x, pos.y);
+            PC.selected = hit;
+
+            if (hit >= 0) {
+                PC.dragging  = true;
+                PC.dragOffX  = pos.x - PC.elements[hit].x;
+                PC.dragOffY  = pos.y - PC.elements[hit].y;
+            }
+            pcRedraw();
+
+        } else if (e.touches.length === 2 && PC.selected >= 0) {
+            PC.dragging = false;
+            PC.pinching = true;
+            var t0 = e.touches[0], t1 = e.touches[1];
+            PC.pinchDist0 = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            PC.pinchW0    = PC.elements[PC.selected].w;
+            PC.pinchH0    = PC.elements[PC.selected].h;
+        }
+    }
+
+    function pcTouchMove(e) {
+        e.preventDefault();
+
+        if (PC.dragging && e.touches.length === 1 && PC.selected >= 0) {
+            var t   = e.touches[0];
+            var pos = pcToCanvas(t.clientX, t.clientY);
+            PC.elements[PC.selected].x = pos.x - PC.dragOffX;
+            PC.elements[PC.selected].y = pos.y - PC.dragOffY;
+            pcRedraw();
+
+        } else if (PC.pinching && e.touches.length === 2 && PC.selected >= 0) {
+            var t0   = e.touches[0], t1 = e.touches[1];
+            var dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            var sc   = dist / PC.pinchDist0;
+            var el   = PC.elements[PC.selected];
+            el.w = Math.max(60,  PC.pinchW0 * sc);
+            el.h = Math.max(90,  PC.pinchH0 * sc);
+            pcRedraw();
+        }
+    }
+
+    function pcTouchEnd(e) {
+        e.preventDefault();
+        if (PC.dragging)  PC.dragging = false;
+        if (PC.pinching)  PC.pinching = false;
+    }
+
+    /* ── Background ──────────────────────────────────────────── */
+    function pcLoadBg(url) {
+        var img = new Image();
+        img.onload = function() {
+            PC.elements = PC.elements.filter(function(el) { return el.type !== 'bg'; });
+            PC.elements.unshift({ type: 'bg', img: img, x: 0, y: 0, w: POST_W, h: POST_H });
+            pcRedraw();
+        };
+        img.onerror = function() { pcRedraw(); };
+        img.src = url;
+    }
+
+    window.pcChangeBg = function() {
+        var f = $('pc-bg-file');
+        if (f) f.click();
+    };
+
+    /* ── Card sheet ──────────────────────────────────────────── */
+    window.pcOpenCardSheet = function() {
+        var s = $('pc-card-sheet'), o = $('pc-sheet-overlay');
+        if (s) s.classList.add('open');
+        if (o) o.classList.add('open');
+    };
+    window.pcCloseSheet = function() {
+        var s = $('pc-card-sheet'), o = $('pc-sheet-overlay');
+        if (s) s.classList.remove('open');
+        if (o) o.classList.remove('open');
+    };
+    window.pcSetWrapper = function(val) {
+        PC.withWrapper = val;
+        var on = $('pc-wrap-on'), off = $('pc-wrap-off');
+        if (on)  on.classList.toggle('active',  val);
+        if (off) off.classList.toggle('active', !val);
+    };
+
+    window.pcAddCard = function(globalIdx) {
+        window.pcCloseSheet();
+        var loadEl = $('fc-post-load');
+        if (loadEl) loadEl.style.display = 'flex';
+
+        var fd = new FormData();
+        fd.append('action',       'fc_dl_generate_dme_png');
+        fd.append('nonce',        FC_DL.nonce);
+        fd.append('indices[]',    globalIdx);
+        fd.append('with_wrapper', PC.withWrapper ? 'true' : 'false');
+
+        fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (loadEl) loadEl.style.display = 'none';
+                if (!res.success) { alert('Erro: ' + ((res.data && res.data.message) || '?')); return; }
+
+                pcPushHistory();
+                var img = new Image();
+                img.onload = function() {
+                    /* 33% da largura do canvas como tamanho inicial */
+                    var cw = Math.round(POST_W * 0.33);
+                    var ch = Math.round(cw * (img.naturalHeight / img.naturalWidth));
+                    PC.elements.push({
+                        type: 'card',
+                        img:  img,
+                        x:    Math.round((POST_W - cw) / 2),
+                        y:    Math.round((POST_H - ch) / 2),
+                        w:    cw,
+                        h:    ch,
+                    });
+                    PC.selected = PC.elements.length - 1;
+                    pcRedraw();
+                };
+                img.src = res.data.url;
+            })
+            .catch(function(err) {
+                if (loadEl) loadEl.style.display = 'none';
+                alert('Falha ao gerar card: ' + err.message);
+            });
+    };
+
+    /* ── Texto ───────────────────────────────────────────────── */
+    window.pcOpenText = function() {
+        var p = $('pc-text-panel');
+        if (!p) return;
+        p.classList.add('open');
+        var inp = $('pc-txt');
+        if (inp) { inp.value = ''; setTimeout(function() { inp.focus(); }, 350); }
+    };
+    window.pcCloseText = function() {
+        var p = $('pc-text-panel');
+        if (p) p.classList.remove('open');
+    };
+    window.pcConfirmText = function() {
+        var inp   = $('pc-txt');
+        var sizeEl= $('pc-txt-size');
+        var wEl   = $('pc-txt-weight');
+        var cEl   = $('pc-txt-color');
+        var text  = inp ? inp.value.trim() : '';
+        if (!text) return;
+
+        var size   = parseInt((sizeEl && sizeEl.value) || '64', 10);
+        var weight = (wEl && wEl.value) || '700';
+        var color  = (cEl && cEl.value) || '#ffffff';
+
+        /* Mede largura no ctx para posicionamento central */
+        var ctx = PC.ctx;
+        ctx.font = weight + ' ' + size + 'px Montserrat,Arial,sans-serif';
+        var tw = ctx.measureText(text).width;
+        var th = size * 1.25;
+
+        pcPushHistory();
+        PC.elements.push({
+            type:   'text',
+            text:   text,
+            x:      Math.max(0, Math.round((POST_W - tw) / 2)),
+            y:      Math.round(POST_H * 0.78),
+            w:      Math.ceil(tw),
+            h:      Math.ceil(th),
+            size:   size,
+            color:  color,
+            weight: weight,
+        });
+        PC.selected = PC.elements.length - 1;
+        window.pcCloseText();
+        pcRedraw();
+    };
+
+    /* ── Deletar / Undo ──────────────────────────────────────── */
+    window.pcDeleteSelected = function() {
+        if (PC.selected < 0) return;
+        pcPushHistory();
+        PC.elements.splice(PC.selected, 1);
+        PC.selected = -1;
+        pcRedraw();
+    };
+
+    function pcPushHistory() {
+        /* Armazena snapshot leve (referências de img, não cópias) */
+        PC.history.push(PC.elements.map(function(el) { return Object.assign({}, el); }));
+        if (PC.history.length > 20) PC.history.shift();
+    }
+
+    window.pcUndo = function() {
+        if (!PC.history.length) return;
+        PC.elements = PC.history.pop();
+        PC.selected = -1;
+        pcRedraw();
+    };
+

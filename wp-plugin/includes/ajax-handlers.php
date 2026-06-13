@@ -314,36 +314,42 @@ function fc_dl_ajax_generate_dme_png() {
             'responsive'      => false,
         ] );
 
-        // Monta o card wrapper com nome (header) e expiração (footer) — capturado pelo .fc-card-wrapper no Puppeteer
-        $expires_in  = fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) );
-        $name_esc    = htmlspecialchars( $p['name'] ?? '', ENT_QUOTES, 'UTF-8' );
-        $exp_esc     = htmlspecialchars( $expires_in, ENT_QUOTES, 'UTF-8' );
-        $card_w      = FC_DL_Png_Builder::CARD_WIDTH;
+        // with_wrapper: true = header (nome) + footer (expiração); false = só o card puro
+        $with_wrapper = ( isset( $_POST['with_wrapper'] ) && $_POST['with_wrapper'] === 'true' );
 
-        // Aspas duplas dentro de single-quote PHP são literais — sem escape, sem barras no HTML
-        $header_html = '<div style="padding:11px 14px;text-align:center;font-size:13px;font-weight:700;'
-            . 'color:#f1f1f1;background:#222222;border-bottom:1px solid #2e2e2e;white-space:nowrap;'
-            . 'overflow:hidden;text-overflow:ellipsis;'
-            . 'font-family:-apple-system,BlinkMacSystemFont,Roboto,sans-serif;">'
-            . $name_esc . '</div>';
+        if ( $with_wrapper ) {
+            $expires_in  = fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) );
+            $name_esc    = htmlspecialchars( $p['name'] ?? '', ENT_QUOTES, 'UTF-8' );
+            $exp_esc     = htmlspecialchars( $expires_in, ENT_QUOTES, 'UTF-8' );
+            $card_w      = FC_DL_Png_Builder::CARD_WIDTH;
 
-        $footer_html = $expires_in
-            ? '<div style="padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:6px;'
-              . 'font-size:11px;font-weight:700;color:#f97316;background:rgba(249,115,22,0.07);'
-              . 'border-top:1px solid rgba(249,115,22,0.18);'
-              . 'font-family:-apple-system,BlinkMacSystemFont,Roboto,sans-serif;">'
-              . '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"'
-              . ' fill="none" stroke="#f97316" stroke-width="2"><circle cx="12" cy="12" r="10"/>'
-              . '<polyline points="12 6 12 12 16 14"/></svg>'
-              . $exp_esc . '</div>'
-            : '';
+            $header_html = '<div style="padding:11px 14px;text-align:center;font-size:13px;font-weight:700;'
+                . 'color:#f1f1f1;background:#222222;border-bottom:1px solid #2e2e2e;white-space:nowrap;'
+                . 'overflow:hidden;text-overflow:ellipsis;'
+                . 'font-family:-apple-system,BlinkMacSystemFont,Roboto,sans-serif;">'
+                . $name_esc . '</div>';
 
-        $wrapped_html = '<div class="fc-card-wrapper" style="display:inline-flex;flex-direction:column;'
-            . 'align-items:stretch;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:14px;'
-            . 'overflow:hidden;width:' . $card_w . 'px;">'
-            . $header_html . $card_html . $footer_html . '</div>';
+            $footer_html = $expires_in
+                ? '<div style="padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:6px;'
+                  . 'font-size:11px;font-weight:700;color:#f97316;background:rgba(249,115,22,0.07);'
+                  . 'border-top:1px solid rgba(249,115,22,0.18);'
+                  . 'font-family:-apple-system,BlinkMacSystemFont,Roboto,sans-serif;">'
+                  . '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"'
+                  . ' fill="none" stroke="#f97316" stroke-width="2"><circle cx="12" cy="12" r="10"/>'
+                  . '<polyline points="12 6 12 12 16 14"/></svg>'
+                  . $exp_esc . '</div>'
+                : '';
 
-        $players[] = [ 'name' => $p['name'] ?? "player_$idx", 'card_html' => $wrapped_html ];
+            $final_html = '<div class="fc-card-wrapper" style="display:inline-flex;flex-direction:column;'
+                . 'align-items:stretch;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:14px;'
+                . 'overflow:hidden;width:' . $card_w . 'px;">'
+                . $header_html . $card_html . $footer_html . '</div>';
+        } else {
+            // Só o card — Puppeteer usa fallback .fc-player-card
+            $final_html = $card_html;
+        }
+
+        $players[] = [ 'name' => $p['name'] ?? "player_$idx", 'card_html' => $final_html ];
     }
 
     if ( empty( $players ) ) wp_send_json_error( [ 'message' => 'Nenhum jogador válido' ] );

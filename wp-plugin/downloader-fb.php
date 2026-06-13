@@ -61,6 +61,7 @@ function fc_dl_shortcode() {
         <div id="fc-dl-screen-grid"  class="fc-dl-screen" style="display:none;"></div>
         <div id="fc-dl-screen-squad" class="fc-dl-screen" style="display:none;"></div>
         <div id="fc-dl-screen-dme"   class="fc-dl-screen" style="display:none;"></div>
+        <div id="fc-dl-screen-post"  class="fc-dl-screen" style="display:none;"></div>
     </div>
     <?php
     return ob_get_clean();
