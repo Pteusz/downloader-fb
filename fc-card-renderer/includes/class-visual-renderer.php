@@ -119,7 +119,14 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
             </div>
 
             <div class="fc-card-icons-footer">
-                <?php /* Ordem original EA FC: liga → clube → nação (esquerda p/ direita) */ ?>
+                <?php /* Ordem confirmada pelo HTML do futbin: nação → liga → clube */ ?>
+                <?php if (!empty($normalized['info']['nation']['icon'])): ?>
+                    <img src="<?php echo esc_url($normalized['info']['nation']['icon']); ?>"
+                         alt="<?php echo esc_attr($normalized['info']['nation']['name']); ?>"
+                         class="fc-icon fc-icon-nation"
+                         title="<?php echo esc_attr($normalized['info']['nation']['name']); ?>">
+                <?php endif; ?>
+
                 <?php if (!empty($normalized['info']['league']['icon'])): ?>
                     <img src="<?php echo esc_url($normalized['info']['league']['icon']); ?>"
                          alt="<?php echo esc_attr($normalized['info']['league']['name']); ?>"
@@ -132,13 +139,6 @@ onload="if(this.naturalWidth && this.naturalHeight && this.naturalWidth===this.n
                          alt="<?php echo esc_attr($normalized['info']['club']['name']); ?>"
                          class="fc-icon fc-icon-club"
                          title="<?php echo esc_attr($normalized['info']['club']['name']); ?>">
-                <?php endif; ?>
-
-                <?php if (!empty($normalized['info']['nation']['icon'])): ?>
-                    <img src="<?php echo esc_url($normalized['info']['nation']['icon']); ?>"
-                         alt="<?php echo esc_attr($normalized['info']['nation']['name']); ?>"
-                         class="fc-icon fc-icon-nation"
-                         title="<?php echo esc_attr($normalized['info']['nation']['name']); ?>">
                 <?php endif; ?>
             </div>
         </div>
