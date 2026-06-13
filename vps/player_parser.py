@@ -396,7 +396,14 @@ def _find_player_url(card, version: str) -> str | None:
         if re.search(r"/\d+/player/\d+/", href):
             return href if href.startswith("http") else BASE_URL + href
 
-    # 2ª tentativa: data-player-hover-location
+    # 2ª tentativa: <a> pai — quando o card é filho direto do link (listing page)
+    parent = card.parent
+    if parent and parent.name == "a":
+        href = parent.get("href", "")
+        if re.search(r"/\d+/player/\d+/", href):
+            return href if href.startswith("http") else BASE_URL + href
+
+    # 3ª tentativa: data-player-hover-location
     hover_el = card.select_one("[data-player-hover-location]")
     if hover_el:
         hover_path = (hover_el.get("data-player-hover-location") or "").strip()
