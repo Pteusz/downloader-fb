@@ -505,6 +505,34 @@
     color: var(--clr-text);
 }
 
+/* Toggle Stories / Feed */
+.fc-post-mode-toggle {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 160px;
+}
+.fc-post-mode-btn {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 0.75em;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    color: var(--clr-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.fc-post-mode-btn.active {
+    background: var(--clr-orange);
+    color: #fff;
+}
+
 /* ── Canvas ──────────────────────────────────────────── */
 .fc-post-canvas-wrap {
     position: relative;

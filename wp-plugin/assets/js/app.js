@@ -486,9 +486,18 @@
          - Export: canvas.toDataURL() → download direto (Fase 2)
     ══════════════════════════════════════════════════════════ */
 
-    var POST_BG_DEFAULT = 'https://chamacoins.com.br/wp-content/uploads/2026/06/ChatGPT-Image-13-de-jun.-de-2026-16_54_23-1.png';
-    var POST_W = 941;
-    var POST_H = 1672;
+    var POST_MODES = {
+        stories: {
+            w:  941,
+            h:  1672,
+            bg: 'https://chamacoins.com.br/wp-content/uploads/2026/06/ChatGPT-Image-13-de-jun.-de-2026-16_54_23-1.png'
+        },
+        feed: {
+            w:  1122,
+            h:  1402,
+            bg: 'https://chamacoins.com.br/wp-content/uploads/2026/06/ChatGPT-Image-13-de-jun.-de-2026-18_26_51.png'
+        }
+    };
 
     var PC = {   /* PostCanvas state */
         el:          null,   // <canvas>
@@ -504,6 +513,9 @@
         pinchH0:     0,
         history:     [],     // undo stack (máx 20)
         withWrapper: true,   // toggle no sheet — padrão = 'Com info' (coincide com o botão active no HTML)
+        mode:        'stories', // 'stories' | 'feed'
+        w:           941,        // largura canvas (muda com o modo)
+        h:           1672,       // altura canvas  (muda com o modo)
         dmeItems:    null,   // cache dos players DME
         fontReady:   false,
     };
@@ -539,7 +551,10 @@
             /* Top bar */
             '<div class="fc-post-topbar">' +
                 '<a class="fc-dl-back" href="#squads" style="min-width:48px;">← Voltar</a>' +
-                '<span class="fc-post-title">Criar Post</span>' +
+                '<div class="fc-post-mode-toggle">' +
+                    '<button class="fc-post-mode-btn' + (PC.mode === 'stories' ? ' active' : '') + '" id="pc-mode-stories" onclick="window.pcSwitchMode('stories')">Stories</button>' +
+                    '<button class="fc-post-mode-btn' + (PC.mode === 'feed'    ? ' active' : '') + '" id="pc-mode-feed"    onclick="window.pcSwitchMode('feed')">Feed</button>' +
+                '</div>' +
                 '<button class="fc-dl-btn fc-dl-btn-ghost" style="padding:6px 10px;font-size:0.8em;" onclick="window.pcUndo()">↩ Desfazer</button>' +
             '</div>' +
 
@@ -662,8 +677,8 @@
         PC.elements  = [];
         PC.selected  = -1;
         PC.history   = [];
-        canvasEl.width  = POST_W;
-        canvasEl.height = POST_H;
+        canvasEl.width  = PC.w;
+        canvasEl.height = PC.h;
 
         canvasEl.addEventListener('touchstart', pcTouchStart, { passive: false });
         canvasEl.addEventListener('touchmove',  pcTouchMove,  { passive: false });
@@ -701,7 +716,7 @@
     /* ── Utilitários de coordenadas ──────────────────────────── */
     function pcScale() {
         if (!PC.el) return 1;
-        return PC.el.getBoundingClientRect().width / POST_W;
+        return PC.el.getBoundingClientRect().width / PC.w;
     }
 
     function pcToCanvas(clientX, clientY) {
@@ -732,7 +747,7 @@
     function pcRedraw() {
         if (!PC.ctx) return;
         var ctx = PC.ctx;
-        ctx.clearRect(0, 0, POST_W, POST_H);
+        ctx.clearRect(0, 0, PC.w, PC.h);
 
         PC.elements.forEach(function(el, i) {
             if ((el.type === 'bg' || el.type === 'card') && el.img) {
@@ -846,7 +861,7 @@
         var img = new Image();
         img.onload = function() {
             PC.elements = PC.elements.filter(function(el) { return el.type !== 'bg'; });
-            PC.elements.unshift({ type: 'bg', img: img, x: 0, y: 0, w: POST_W, h: POST_H });
+            PC.elements.unshift({ type: 'bg', img: img, x: 0, y: 0, w: PC.w, h: PC.h });
             pcRedraw();
         };
         img.onerror = function() { pcRedraw(); };
@@ -897,13 +912,13 @@
                 var img = new Image();
                 img.onload = function() {
                     /* 33% da largura do canvas como tamanho inicial */
-                    var cw = Math.round(POST_W * 0.33);
+                    var cw = Math.round(PC.w * 0.33);
                     var ch = Math.round(cw * (img.naturalHeight / img.naturalWidth));
                     PC.elements.push({
                         type: 'card',
                         img:  img,
-                        x:    Math.round((POST_W - cw) / 2),
-                        y:    Math.round((POST_H - ch) / 2),
+                        x:    Math.round((PC.w - cw) / 2),
+                        y:    Math.round((PC.h - ch) / 2),
                         w:    cw,
                         h:    ch,
                     });
@@ -952,8 +967,8 @@
         PC.elements.push({
             type:   'text',
             text:   text,
-            x:      Math.max(0, Math.round((POST_W - tw) / 2)),
-            y:      Math.round(POST_H * 0.78),
+            x:      Math.max(0, Math.round((PC.w - tw) / 2)),
+            y:      Math.round(PC.h * 0.78),
             w:      Math.ceil(tw),
             h:      Math.ceil(th),
             size:   size,
@@ -979,6 +994,38 @@
         PC.history.push(PC.elements.map(function(el) { return Object.assign({}, el); }));
         if (PC.history.length > 20) PC.history.shift();
     }
+
+    /* ── Trocar modo (Stories ↔ Feed) ──────────────────────────── */
+    window.pcSwitchMode = function(mode) {
+        if (PC.mode === mode) return;
+
+        // Confirma se já há elementos no canvas além do bg
+        var hasEls = PC.elements.some(function(el) { return el.type !== 'bg'; });
+        if (hasEls && !confirm('Trocar o formato vai limpar o canvas. Continuar?')) return;
+
+        PC.mode = mode;
+        var cfg  = POST_MODES[mode];
+        PC.w = cfg.w;
+        PC.h = cfg.h;
+
+        // Redimensiona o canvas
+        if (PC.el) {
+            PC.el.width  = PC.w;
+            PC.el.height = PC.h;
+        }
+
+        // Limpa elementos e carrega novo fundo
+        PC.elements  = [];
+        PC.selected  = -1;
+        PC.history   = [];
+        pcLoadBg(cfg.bg);
+
+        // Atualiza visuais dos botões
+        var bs = document.getElementById('pc-mode-stories');
+        var bf = document.getElementById('pc-mode-feed');
+        if (bs) { bs.classList.toggle('active', mode === 'stories'); }
+        if (bf) { bf.classList.toggle('active', mode === 'feed'); }
+    };
 
     /* ── Download do post ───────────────────────────────────── */
     window.pcDownload = function() {
