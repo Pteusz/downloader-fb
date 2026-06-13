@@ -565,6 +565,10 @@
                     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>' +
                     'Fundo' +
                 '</button>' +
+                '<button class="fc-post-tool-btn fc-dl-btn-primary" onclick="window.pcDownload()">' +
+                    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+                    'Baixar' +
+                '</button>' +
                 '<button class="fc-post-tool-btn danger" id="pc-del-btn" onclick="window.pcDeleteSelected()" style="display:none;">' +
                     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>' +
                     'Deletar' +
@@ -636,7 +640,11 @@
             return '<p style="padding:20px 16px;color:var(--clr-muted);font-size:0.85em;">Nenhum card DME disponível.</p>';
         }
         return PC.dmeItems.map(function(p) {
+            var faceHtml = p.face
+                ? '<img src="' + esc(p.face) + '" alt="" class="fc-post-card-face" loading="lazy">'
+                : '<div class="fc-post-card-face fc-post-card-face-fallback"></div>';
             return '<div class="fc-post-card-row" onclick="window.pcAddCard(' + p.global_idx + ')">' +
+                faceHtml +
                 '<div class="fc-post-card-row-info">' +
                     '<span class="fc-post-card-rating">' + esc(String(p.rating)) + '</span>' +
                     '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
@@ -971,6 +979,34 @@
         PC.history.push(PC.elements.map(function(el) { return Object.assign({}, el); }));
         if (PC.history.length > 20) PC.history.shift();
     }
+
+    /* ── Download do post ───────────────────────────────────── */
+    window.pcDownload = function() {
+        if (!PC.el) return;
+
+        // Remove seleção para o PNG não ter o dashed border laranja
+        var prev = PC.selected;
+        PC.selected = -1;
+        pcRedraw();
+
+        try {
+            var dataUrl = PC.el.toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href     = dataUrl;
+            a.download = 'post_' + Date.now() + '.png';
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { document.body.removeChild(a); }, 300);
+        } catch (err) {
+            alert('Erro ao baixar imagem: ' + err.message);
+            console.error('[pcDownload]', err);
+        }
+
+        // Restaura seleção
+        PC.selected = prev;
+        pcRedraw();
+    };
 
     window.pcUndo = function() {
         if (!PC.history.length) return;

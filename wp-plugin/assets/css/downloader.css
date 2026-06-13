@@ -717,6 +717,30 @@
     pointer-events: none; /* o clique é capturado pelo row */
 }
 
+/* Foto do jogador no card row do sheet */
+.fc-post-card-face {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center top; /* prioriza rosto */
+    flex-shrink: 0;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+}
+.fc-post-card-face-fallback {
+    background: var(--clr-surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fc-post-card-face-fallback::after {
+    content: '?';
+    color: var(--clr-muted);
+    font-size: 1.2em;
+    font-weight: 700;
+}
+
 /* ── Painel de texto ─────────────────────────────────── */
 .fc-post-text-panel {
     position: fixed;

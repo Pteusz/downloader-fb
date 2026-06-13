@@ -215,6 +215,7 @@ function fc_dl_ajax_get_dme_items() {
             'name'       => $p['name']     ?? ( $item['name'] ?? '' ),
             'rating'     => $p['rating']   ?? '',
             'position'   => $p['position'] ?? '',
+            'face'       => $normalized['face'] ?? '',   // URL da foto do jogador
             'card_html'  => $card_html,
             'expires_in' => fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) ),
         ];
