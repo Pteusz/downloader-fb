@@ -244,16 +244,21 @@
             html += '<div class="fc-dl-section-title">Jogadores <span class="fc-dl-count">' + players.length + '</span></div>';
             html += '<div class="fc-dl-players-grid">';
             players.forEach(function (p) {
-                var expiresBadge = p.expires_in
-                    ? '<div class="fc-dl-expires-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' + esc(p.expires_in) + '</div>'
+                var footerHtml = p.expires_in
+                    ? '<div class="fc-dl-dme-card-footer">'
+                      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+                      + esc(p.expires_in)
+                      + '</div>'
                     : '';
                 html += '<label class="fc-dl-player-wrap">'
                       + '<input type="checkbox" class="fc-dl-dme-chk"'
                       + ' data-global-idx="' + p.global_idx + '"'
                       + ' data-name="' + esc(p.name) + '">'
+                      + '<div class="fc-dl-dme-card">'
+                      + '<div class="fc-dl-dme-card-header">' + esc(p.name) + '</div>'
                       + '<div class="fc-dl-card-shell">' + p.card_html + '</div>'
-                      + expiresBadge
-                      + '<span class="fc-dl-player-label">' + esc(p.name) + '</span>'
+                      + footerHtml
+                      + '</div>'
                       + '</label>';
             });
             html += '</div>';

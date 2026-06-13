@@ -45,7 +45,7 @@ async function getBrowser() {
 // ── Renderiza um card e retorna Buffer PNG ────────────────────
 async function renderCard(html, css, width) {
     const w  = width || 400;
-    const h  = Math.ceil(w * 1.6);   // margem vertical suficiente
+    const h  = Math.ceil(w * 2.2);   // margem extra para wrapper com header/footer
 
     const b    = await getBrowser();
     const page = await b.newPage();
@@ -109,8 +109,9 @@ ${css || ''}
         ]));
 
         // Captura exatamente o bounding-box do card (sem padding do body)
-        const el = await page.$('.fc-player-card');
-        if (!el) throw new Error('Elemento .fc-player-card não encontrado');
+        // Prefer .fc-card-wrapper (DME com header/footer); fallback para .fc-player-card
+        const el = await page.$('.fc-card-wrapper') ?? await page.$('.fc-player-card');
+        if (!el) throw new Error('Elemento .fc-card-wrapper ou .fc-player-card não encontrado');
 
         const box = await el.boundingBox();
         const png = await page.screenshot({
