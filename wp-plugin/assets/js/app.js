@@ -248,8 +248,23 @@
         var players = items.filter(function (i) { return i.type === 'player'; });
         if (players.length) {
             html += '<div class="fc-dl-section-title">Jogadores <span class="fc-dl-count">' + players.length + '</span></div>';
+            html += '<div class="fc-dme-section-controls">'
+                  + '<div class="fc-dme-plat-toggle">'
+                  + '<button class="fc-dme-plat-btn' + (dmePlatform === 'console' ? ' active' : '') + '" data-plat="console" onclick="window.dmeSwitchPlatform(this.dataset.plat)">Console</button>'
+                  + '<button class="fc-dme-plat-btn' + (dmePlatform === 'pc'      ? ' active' : '') + '" data-plat="pc"      onclick="window.dmeSwitchPlatform(this.dataset.plat)">PC</button>'
+                  + '</div></div>';
             html += '<div class="fc-dl-players-grid">';
             players.forEach(function (p) {
+                var consoleP = p.preco_console_brl || 0;
+                var pcP      = p.preco_pc_brl      || 0;
+                var priceVal = dmePlatform === 'pc' ? pcP : consoleP;
+                var priceHtml = (consoleP || pcP)
+                    ? '<div class="fc-dl-dme-card-price"'
+                      + ' data-console="' + consoleP + '"'
+                      + ' data-pc="' + pcP + '">'
+                      + ( priceVal > 0 ? 'R$ ' + priceVal.toFixed(2).replace('.', ',') : '' )
+                      + '</div>'
+                    : '';
                 var footerHtml = p.expires_in
                     ? '<div class="fc-dl-dme-card-footer">'
                       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
@@ -263,6 +278,7 @@
                       + '<div class="fc-dl-dme-card">'
                       + '<div class="fc-dl-dme-card-header">' + esc(p.name) + '</div>'
                       + '<div class="fc-dl-card-shell">' + p.card_html + '</div>'
+                      + priceHtml
                       + footerHtml
                       + '</div>'
                       + '</label>';
@@ -486,6 +502,8 @@
          - Export: canvas.toDataURL() → download direto (Fase 2)
     ══════════════════════════════════════════════════════════ */
 
+    var dmePlatform = 'console';  // plataforma de preço ativa: 'console' | 'pc'
+
     var POST_MODES = {
         stories: {
             w:  941,
@@ -600,7 +618,13 @@
             '<div id="pc-card-sheet" class="fc-post-sheet">' +
                 '<div class="fc-post-sheet-handle"></div>' +
                 '<div class="fc-post-sheet-header">' +
-                    '<span>Escolher Card</span>' +
+                    '<div class="fc-post-sheet-header-row">' +
+                        '<span class="fc-post-sheet-title">Escolher Card</span>' +
+                        '<div class="fc-post-plat-toggle">' +
+                            '<button class="fc-post-plat-btn' + (dmePlatform === 'console' ? ' active' : '') + '" data-plat="console" onclick="window.dmeSwitchPlatform(this.dataset.plat)">Console</button>' +
+                            '<button class="fc-post-plat-btn' + (dmePlatform === 'pc'      ? ' active' : '') + '" data-plat="pc"      onclick="window.dmeSwitchPlatform(this.dataset.plat)">PC</button>' +
+                        '</div>' +
+                    '</div>' +
                     '<div class="fc-post-wrap-toggle">' +
                         '<button class="fc-post-wrap-btn" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
                         '<button class="fc-post-wrap-btn active" id="pc-wrap-on" onclick="window.pcSetWrapper(true)">Com info</button>' +
@@ -658,6 +682,14 @@
             var faceHtml = p.face
                 ? '<img src="' + esc(p.face) + '" alt="" class="fc-post-card-face" loading="lazy">'
                 : '<div class="fc-post-card-face fc-post-card-face-fallback"></div>';
+            var cP = p.preco_console_brl || 0;
+            var pP = p.preco_pc_brl      || 0;
+            var pv = dmePlatform === 'pc' ? pP : cP;
+            var priceSpan = (cP || pP)
+                ? '<span class="fc-post-card-price" data-console="' + cP + '" data-pc="' + pP + '">'
+                  + ( pv > 0 ? 'R$\u00a0' + pv.toFixed(2).replace('.', ',') : '' )
+                  + '</span>'
+                : '';
             return '<div class="fc-post-card-row" onclick="window.pcAddCard(' + p.global_idx + ')">' +
                 faceHtml +
                 '<div class="fc-post-card-row-info">' +
@@ -665,6 +697,7 @@
                     '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
                     '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
                 '</div>' +
+                priceSpan +
                 '<span class="fc-post-card-add-btn">+</span>' +
             '</div>';
         }).join('');
@@ -901,6 +934,7 @@
         fd.append('nonce',        FC_DL.nonce);
         fd.append('indices[]',    globalIdx);
         fd.append('with_wrapper', PC.withWrapper ? 'true' : 'false');
+        fd.append('platform',     dmePlatform);
 
         fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
             .then(function(r) { return r.json(); })
@@ -994,6 +1028,22 @@
         PC.history.push(PC.elements.map(function(el) { return Object.assign({}, el); }));
         if (PC.history.length > 20) PC.history.shift();
     }
+
+    /* ── Plataforma de preços (Console ↔ PC) ──────────────────── */
+    window.dmeSwitchPlatform = function(plat) {
+        dmePlatform = plat;
+        // Atualiza todos os botões de plataforma visíveis
+        document.querySelectorAll('.fc-dme-plat-btn, .fc-post-plat-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.plat === plat);
+        });
+        // Atualiza todos os badges de preço sem re-render
+        document.querySelectorAll('.fc-dl-dme-card-price, .fc-post-card-price').forEach(function(el) {
+            var raw = plat === 'pc' ? el.dataset.pc : el.dataset.console;
+            el.textContent = raw && parseFloat(raw) > 0
+                ? 'R$ ' + parseFloat(raw).toFixed(2).replace('.', ',')
+                : '';
+        });
+    };
 
     /* ── Trocar modo (Stories ↔ Feed) ──────────────────────────── */
     window.pcSwitchMode = function(mode) {

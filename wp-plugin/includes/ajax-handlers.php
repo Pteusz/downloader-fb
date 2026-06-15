@@ -197,6 +197,8 @@ function fc_dl_ajax_get_dme_items() {
     $result = [];
 
     // Players primeiro (com checkbox + PNG)
+    $price_map = fc_dl_load_price_map();   // carrega todos os preços de uma vez
+
     foreach ( $players_raw as $pidx => $item ) {
         $p = fc_dl_adapt_player( $item['player_details'] );
         if ( empty( $p ) ) continue;
@@ -209,15 +211,18 @@ function fc_dl_ajax_get_dme_items() {
             'responsive'      => true,
         ] );
 
+        $pdata  = $price_map[ $p['name'] ?? '' ] ?? null;
         $result[] = [
-            'type'       => 'player',
-            'global_idx' => $pidx,
-            'name'       => $p['name']     ?? ( $item['name'] ?? '' ),
-            'rating'     => $p['rating']   ?? '',
-            'position'   => $p['position'] ?? '',
-            'face'       => $normalized['face'] ?? '',   // URL da foto do jogador
-            'card_html'  => $card_html,
-            'expires_in' => fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) ),
+            'type'              => 'player',
+            'global_idx'        => $pidx,
+            'name'              => $p['name']     ?? ( $item['name'] ?? '' ),
+            'rating'            => $p['rating']   ?? '',
+            'position'          => $p['position'] ?? '',
+            'face'              => $normalized['face'] ?? '',
+            'card_html'         => $card_html,
+            'expires_in'        => fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) ),
+            'preco_console_brl' => $pdata ? $pdata['console'] : null,
+            'preco_pc_brl'      => $pdata ? $pdata['pc']      : null,
         ];
     }
 
@@ -317,6 +322,8 @@ function fc_dl_ajax_generate_dme_png() {
 
         // with_wrapper: true = header (nome) + footer (expiração); false = só o card puro
         $with_wrapper = ( isset( $_POST['with_wrapper'] ) && $_POST['with_wrapper'] === 'true' );
+        $platform     = sanitize_key( $_POST['platform'] ?? 'console' );
+        $price_map_g  = $with_wrapper ? fc_dl_load_price_map() : [];
 
         if ( $with_wrapper ) {
             $expires_in  = fc_dl_translate_expires( trim( (string) ( $item['expires_in'] ?? '' ) ) );
@@ -341,10 +348,23 @@ function fc_dl_ajax_generate_dme_png() {
                   . $exp_esc . '</div>'
                 : '';
 
+            $pval_g = 0;
+            if ( ! empty( $price_map_g[ $p['name'] ?? '' ] ) ) {
+                $pd   = $price_map_g[ $p['name'] ];
+                $pval_g = $platform === 'pc' ? $pd['pc'] : $pd['console'];
+            }
+            $price_html = $pval_g > 0
+                ? '<div style="padding:7px 14px;text-align:center;font-size:12px;font-weight:800;'
+                  . 'color:#22c55e;background:rgba(34,197,94,0.07);'
+                  . 'border-top:1px solid rgba(34,197,94,0.15);'
+                  . 'font-family:-apple-system,BlinkMacSystemFont,Roboto,sans-serif;">'
+                  . 'R$ ' . number_format( $pval_g, 2, ',', '.' ) . '</div>'
+                : '';
+
             $final_html = '<div class="fc-card-wrapper" style="display:inline-flex;flex-direction:column;'
                 . 'align-items:stretch;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:14px;'
                 . 'overflow:hidden;width:' . $card_w . 'px;">'
-                . $header_html . $card_html . $footer_html . '</div>';
+                . $header_html . $card_html . $price_html . $footer_html . '</div>';
         } else {
             // Só o card — Puppeteer usa fallback .fc-player-card
             $final_html = $card_html;
