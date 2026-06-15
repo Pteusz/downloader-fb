@@ -46,6 +46,26 @@ function fc_dl_translate_expires( string $str ): string {
 add_action( 'wp_ajax_fc_dl_get_squads',        'fc_dl_ajax_get_squads' );
 add_action( 'wp_ajax_nopriv_fc_dl_get_squads', 'fc_dl_ajax_get_squads' );
 
+/**
+ * Carrega mapa de preços DME: [ nome => [ console => float, pc => float ] ]
+ * Tabela: wp_dme-precos-dw (WordPress DB, prefixo padrão)
+ */
+function fc_dl_load_price_map() {
+    global $wpdb;
+    $table = $wpdb->prefix . 'dme-precos-dw';
+    // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+    $rows = $wpdb->get_results( "SELECT nome, preco_console_brl, preco_pc_brl FROM `{$table}`", ARRAY_A );
+    if ( ! $rows ) return [];
+    $map = [];
+    foreach ( $rows as $row ) {
+        $map[ $row['nome'] ] = [
+            'console' => (float) $row['preco_console_brl'],
+            'pc'      => (float) $row['preco_pc_brl'],
+        ];
+    }
+    return $map;
+}
+
 function fc_dl_ajax_get_squads() {
     fc_dl_verify();
     $squads = FC_DL_VPS_Api::get_squads();
