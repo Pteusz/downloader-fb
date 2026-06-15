@@ -552,8 +552,8 @@
             '<div class="fc-post-topbar">' +
                 '<a class="fc-dl-back" href="#squads" style="min-width:48px;">← Voltar</a>' +
                 '<div class="fc-post-mode-toggle">' +
-                    '<button class="fc-post-mode-btn' + (PC.mode === 'stories' ? ' active' : '') + '" id="pc-mode-stories" onclick="window.pcSwitchMode('stories')">Stories</button>' +
-                    '<button class="fc-post-mode-btn' + (PC.mode === 'feed'    ? ' active' : '') + '" id="pc-mode-feed"    onclick="window.pcSwitchMode('feed')">Feed</button>' +
+                    '<button class="fc-post-mode-btn' + (PC.mode === 'stories' ? ' active' : '') + '" id="pc-mode-stories" data-mode="stories" onclick="window.pcSwitchMode(this.dataset.mode)">Stories</button>' +
+                    '<button class="fc-post-mode-btn' + (PC.mode === 'feed'    ? ' active' : '') + '" id="pc-mode-feed"    data-mode="feed"    onclick="window.pcSwitchMode(this.dataset.mode)">Feed</button>' +
                 '</div>' +
                 '<button class="fc-dl-btn fc-dl-btn-ghost" style="padding:6px 10px;font-size:0.8em;" onclick="window.pcUndo()">↩ Desfazer</button>' +
             '</div>' +
@@ -693,7 +693,7 @@
             ]).then(function() { PC.fontReady = true; });
         }
 
-        pcLoadBg(POST_BG_DEFAULT);
+        pcLoadBg(POST_MODES[PC.mode].bg);
     }
 
     /* ── Limpeza ao sair da tela ─────────────────────────────── */
