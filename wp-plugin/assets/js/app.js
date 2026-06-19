@@ -571,6 +571,30 @@
 
     var dmePlatform = 'console';  // plataforma de preço ativa: 'console' | 'pc'
 
+    /* Configurações curadas de grade — cols x rows por contagem e por modo de canvas.
+       'empty' = quantos slots da última linha ficam vazios (grade não-quadrada perfeita) */
+    var GRID_CONFIGS = {
+        stories: {
+            4:  { cols: 2, rows: 2 },
+            8:  { cols: 3, rows: 3, empty: 1 },
+            12: { cols: 3, rows: 4 },
+            16: { cols: 4, rows: 4 },
+            20: { cols: 4, rows: 5 },
+        },
+        feed: {
+            4:  { cols: 2, rows: 2 },
+            8:  { cols: 3, rows: 3, empty: 1 },
+            12: { cols: 4, rows: 3 },
+            16: { cols: 4, rows: 4 },
+            20: { cols: 5, rows: 4 },
+        },
+    };
+    var GRID_MARGIN_TOP    = 0.10;
+    var GRID_MARGIN_BOTTOM = 0.08;
+    var GRID_MARGIN_SIDE   = 0.05;
+    var GRID_GAP_FRAC      = 0.018;
+    var GRID_CARD_ASPECT   = 2 / 3; // w/h real do nosso card (.fc-player-card)
+
     var POST_MODES = {
         stories: {
             w:  941,
@@ -605,7 +629,11 @@
         sheetSource: 'dme',      // 'dme' | 'squads' — fonte ativa no sheet de seleção
         squadsList:  null,       // cache de squads carregados (loaded && total>0)
         squadPlayersCache: {},   // { [label]: players[] } — evita refetch ao voltar
-        squadView:   null,       // { label, players, loading? } quando dentro de um squad; null = lista de squads   // cache dos players DME
+        squadView:   null,       // { label, players, loading? } quando dentro de um squad; null = lista de squads
+        layoutMode:  'free',     // 'free' | 'grid'
+        gridCount:   null,       // 4 | 8 | 12 | 16 | 20 quando layoutMode === 'grid'
+        gridSlots:   [],         // [{cellX,cellY,cellW,cellH, x,y,w,h, filled, elementIndex}]
+        pendingSlot: null,       // índice do slot aguardando escolha de card no sheet   // cache dos players DME
         fontReady:   false,
     };
 
@@ -653,11 +681,17 @@
                 '<div id="fc-post-load" class="fc-post-canvas-loading" style="display:none;">' +
                     '<div class="fc-dl-spinner"></div>' +
                 '</div>' +
+                '<button type="button" id="pc-layout-chip" class="fc-post-layout-chip" onclick="window.pcReopenLayoutModal()">Modo Livre</button>' +
+            '</div>' +
+
+            /* Popup inicial — escolha entre Modo Livre e grades fixas */
+            '<div id="pc-layout-overlay" class="fc-post-layout-overlay">' +
+                '<div class="fc-post-layout-modal">' + buildLayoutModalHtml() + '</div>' +
             '</div>' +
 
             /* Toolbar inferior */
             '<div class="fc-post-toolbar">' +
-                '<button class="fc-post-tool-btn" onclick="window.pcOpenCardSheet()">' +
+                '<button class="fc-post-tool-btn" id="pc-card-tool-btn" onclick="window.pcOpenCardSheet()">' +
                     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>' +
                     'Card' +
                 '</button>' +
@@ -736,6 +770,93 @@
         });
     }
 
+    /* ── Popup inicial: Modo Livre ou Grade fixa ────────────────── */
+    function buildMiniGridPreview(cols, rows, count) {
+        var total = cols * rows;
+        var cells = '';
+        for (var i = 0; i < total; i++) {
+            cells += '<div class="fc-post-mini-cell' + (i < count ? '' : ' empty') + '"></div>';
+        }
+        return '<div class="fc-post-mini-grid" style="grid-template-columns:repeat(' + cols + ',1fr);grid-template-rows:repeat(' + rows + ',1fr);">' + cells + '</div>';
+    }
+
+    function buildLayoutModalHtml() {
+        var freePreview = '<div class="fc-post-layout-free-preview">'
+            + '<div class="fc-post-layout-free-rect" style="left:2px;top:16px;width:16px;height:22px;transform:rotate(-8deg);"></div>'
+            + '<div class="fc-post-layout-free-rect" style="left:18px;top:2px;width:15px;height:20px;transform:rotate(10deg);opacity:.6;"></div>'
+            + '<div class="fc-post-layout-free-rect" style="left:13px;top:22px;width:13px;height:17px;transform:rotate(-4deg);opacity:.4;"></div>'
+            + '</div>';
+
+        var html = '<div class="fc-post-layout-title">Como você quer criar seu post?</div>'
+            + '<div class="fc-post-layout-option" onclick="window.pcChooseLayout(\'free\', null)">'
+            + freePreview
+            + '<div><div class="fc-post-layout-option-label">Modo Livre</div>'
+            + '<div class="fc-post-layout-option-sub">Posicione e redimensione manualmente</div></div>'
+            + '</div>'
+            + '<div class="fc-post-layout-grid-row">';
+
+        [20, 16, 12, 8, 4].forEach(function (n) {
+            var cfg = GRID_CONFIGS[PC.mode][n];
+            html += '<div class="fc-post-layout-option" data-count="' + n + '" onclick="window.pcChooseLayout(\'grid\', this.dataset.count)">'
+                + buildMiniGridPreview(cfg.cols, cfg.rows, n)
+                + '<div><div class="fc-post-layout-option-label">' + n + '</div>'
+                + '<div class="fc-post-layout-option-sub">jogadores</div></div>'
+                + '</div>';
+        });
+
+        html += '</div>';
+        return html;
+    }
+
+    function pcUpdateLayoutChip() {
+        var chip = $('pc-layout-chip');
+        if (!chip) return;
+        chip.textContent = (PC.layoutMode === 'grid') ? ('Grade ' + PC.gridCount) : 'Modo Livre';
+    }
+
+    function pcUpdateToolbarForLayout() {
+        var btn = $('pc-card-tool-btn');
+        if (btn) btn.style.display = (PC.layoutMode === 'grid') ? 'none' : '';
+    }
+
+    window.pcReopenLayoutModal = function () {
+        var overlay = $('pc-layout-overlay');
+        if (!overlay) return;
+        var modal = overlay.querySelector('.fc-post-layout-modal');
+        if (modal) modal.innerHTML = buildLayoutModalHtml(); // recalcula com PC.mode atual
+        overlay.style.display = 'flex';
+    };
+
+    window.pcChooseLayout = function (mode, count) {
+        count = count ? parseInt(count, 10) : null;
+        var changing   = (PC.layoutMode !== mode) || (mode === 'grid' && PC.gridCount !== count);
+        var hasContent = PC.elements.some(function (el) { return el.type !== 'bg'; });
+
+        if (changing && hasContent && !confirm('Trocar o formato vai limpar os cards e textos do canvas. Continuar?')) {
+            return;
+        }
+
+        PC.layoutMode  = mode;
+        PC.gridCount   = (mode === 'grid') ? count : null;
+        PC.pendingSlot = null;
+        if (mode === 'grid') PC.withWrapper = false; // grade sempre usa card puro (alinhamento uniforme)
+
+        if (changing) {
+            PC.elements = [];
+            PC.selected = -1;
+            PC.history  = [];
+        }
+
+        PC.gridSlots = (mode === 'grid') ? pcComputeGridSlots() : [];
+
+        var overlay = $('pc-layout-overlay');
+        if (overlay) overlay.style.display = 'none';
+
+        pcUpdateLayoutChip();
+        pcUpdateToolbarForLayout();
+        pcRedraw();
+    };
+
     function buildCardList() {
         if (!PC.dmeItems || !PC.dmeItems.length) {
             return '<p style="padding:20px 16px;color:var(--clr-muted);font-size:0.85em;">Nenhum card DME disponível.</p>';
@@ -765,6 +886,92 @@
         }).join('');
     }
 
+    /* ── Geometria da grade ──────────────────────────────────── */
+    function pcComputeGridSlots() {
+        var cfg = GRID_CONFIGS[PC.mode] && GRID_CONFIGS[PC.mode][PC.gridCount];
+        if (!cfg) return [];
+
+        var cols = cfg.cols, rows = cfg.rows;
+        var contentW = PC.w * (1 - 2 * GRID_MARGIN_SIDE);
+        var contentH = PC.h * (1 - GRID_MARGIN_TOP - GRID_MARGIN_BOTTOM);
+        var gap   = Math.min(PC.w, PC.h) * GRID_GAP_FRAC;
+        var left0 = PC.w * GRID_MARGIN_SIDE;
+        var top0  = PC.h * GRID_MARGIN_TOP;
+
+        var cellW = (contentW - (cols - 1) * gap) / cols;
+        var cellH = (contentH - (rows - 1) * gap) / rows;
+
+        var fitW, fitH;
+        if (cellW / cellH > GRID_CARD_ASPECT) {
+            fitH = cellH; fitW = cellH * GRID_CARD_ASPECT;
+        } else {
+            fitW = cellW; fitH = cellW / GRID_CARD_ASPECT;
+        }
+
+        var slots = [];
+        var idx = 0;
+        for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+                idx++;
+                if (idx > PC.gridCount) continue; // slots vazios da última linha não existem
+                var x = left0 + c * (cellW + gap);
+                var y = top0  + r * (cellH + gap);
+                slots.push({
+                    cellX: x, cellY: y, cellW: cellW, cellH: cellH,
+                    x: x + (cellW - fitW) / 2, // card centrado horizontalmente
+                    y: y,                       // topo alinhado com a célula
+                    w: fitW, h: fitH,
+                    filled: false,
+                    elementIndex: -1,
+                });
+            }
+        }
+        return slots;
+    }
+
+    /* Recalcula filled/elementIndex de todos os slots a partir de PC.elements —
+       chamado a cada redraw para nunca dessincronizar após delete/undo/push */
+    function pcReindexSlots() {
+        PC.gridSlots.forEach(function (s) { s.filled = false; s.elementIndex = -1; });
+        PC.elements.forEach(function (el, idx) {
+            if (el.slotIndex !== undefined && PC.gridSlots[el.slotIndex]) {
+                PC.gridSlots[el.slotIndex].filled = true;
+                PC.gridSlots[el.slotIndex].elementIndex = idx;
+            }
+        });
+    }
+
+    /* Testa toque em slot VAZIO (slots preenchidos já são pego por pcHit via o elemento) */
+    function pcHitEmptySlot(x, y) {
+        for (var i = 0; i < PC.gridSlots.length; i++) {
+            var s = PC.gridSlots[i];
+            if (s.filled) continue;
+            if (x >= s.cellX && x <= s.cellX + s.cellW && y >= s.cellY && y <= s.cellY + s.cellH) return i;
+        }
+        return -1;
+    }
+
+    /* Desenha contorno tracejado + "+" nos slots vazios (modo grid) */
+    function pcDrawGridGuides() {
+        if (PC.layoutMode !== 'grid' || !PC.gridSlots.length) return;
+        var ctx = PC.ctx;
+        PC.gridSlots.forEach(function (slot) {
+            if (slot.filled) return;
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+            ctx.lineWidth = Math.max(2, 3 / pcScale());
+            ctx.setLineDash([14 / pcScale(), 10 / pcScale()]);
+            ctx.strokeRect(slot.cellX, slot.cellY, slot.cellW, slot.cellH);
+            ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.font = 'bold ' + Math.round(slot.cellW * 0.26) + 'px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('+', slot.cellX + slot.cellW / 2, slot.cellY + slot.cellH / 2);
+            ctx.restore();
+        });
+    }
+
     /* ── Inicialização do canvas ──────────────────────────────── */
     function initPostCanvas(canvasEl) {
         PC.el  = canvasEl;
@@ -772,6 +979,11 @@
         PC.elements  = [];
         PC.selected  = -1;
         PC.history   = [];
+        /* Toda visita à tela começa em modo livre — o popup decide o layout final */
+        PC.layoutMode  = 'free';
+        PC.gridCount   = null;
+        PC.gridSlots   = [];
+        PC.pendingSlot = null;
         canvasEl.width  = PC.w;
         canvasEl.height = PC.h;
 
@@ -844,6 +1056,8 @@
         var ctx = PC.ctx;
         ctx.clearRect(0, 0, PC.w, PC.h);
 
+        if (PC.layoutMode === 'grid') pcReindexSlots();
+
         PC.elements.forEach(function(el, i) {
             if ((el.type === 'bg' || el.type === 'card') && el.img) {
                 ctx.drawImage(el.img, el.x, el.y, el.w, el.h);
@@ -883,6 +1097,8 @@
             }
         });
 
+        pcDrawGridGuides();
+
         /* Atualiza botão deletar na toolbar */
         var delBtn = $('pc-del-btn');
         if (delBtn) delBtn.style.display = PC.selected >= 0 ? '' : 'none';
@@ -905,16 +1121,45 @@
             }
 
             var hit = pcHit(pos.x, pos.y);
-            PC.selected = hit;
 
             if (hit >= 0) {
-                PC.dragging  = true;
-                PC.dragOffX  = pos.x - PC.elements[hit].x;
-                PC.dragOffY  = pos.y - PC.elements[hit].y;
+                PC.selected = hit;
+                var el = PC.elements[hit];
+                var locked = (PC.layoutMode === 'grid' && el.slotIndex !== undefined);
+                if (locked) {
+                    /* Card travado no slot: seleciona (mostra handle de deletar no canto,
+                       caso o usuário só queira limpar) e reabre o picker para trocar o
+                       jogador — fechar o sheet sem escolher revela o × para limpar */
+                    PC.dragging    = false;
+                    PC.pendingSlot = el.slotIndex;
+                    pcRedraw();
+                    window.pcOpenCardSheet();
+                    return;
+                } else {
+                    PC.dragging = true;
+                    PC.dragOffX = pos.x - el.x;
+                    PC.dragOffY = pos.y - el.y;
+                }
+                pcRedraw();
+                return;
             }
+
+            /* Nenhum elemento atingido — em modo grade, testa se tocou um slot vazio */
+            if (PC.layoutMode === 'grid') {
+                var slotIdx = pcHitEmptySlot(pos.x, pos.y);
+                if (slotIdx >= 0) {
+                    PC.pendingSlot = slotIdx;
+                    window.pcOpenCardSheet();
+                    return;
+                }
+            }
+
+            PC.selected = -1;
             pcRedraw();
 
         } else if (e.touches.length === 2 && PC.selected >= 0) {
+            var elSel = PC.elements[PC.selected];
+            if (PC.layoutMode === 'grid' && elSel.slotIndex !== undefined) return; // travado, sem pinch
             PC.dragging = false;
             PC.pinching = true;
             var t0 = e.touches[0], t1 = e.touches[1];
@@ -979,6 +1224,12 @@
     /* ── Corpo dinâmico do sheet (DME | lista de Squads | jogadores do Squad) */
     function pcSheetBodyHtml() {
         if (PC.sheetSource === 'dme') {
+            var wrapToggleHtml = (PC.layoutMode === 'grid') ? '' :
+                '<div class="fc-post-wrap-toggle">' +
+                    '<button class="fc-post-wrap-btn' + (!PC.withWrapper ? ' active' : '') + '" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
+                    '<button class="fc-post-wrap-btn' + ( PC.withWrapper ? ' active' : '') + '" id="pc-wrap-on"  onclick="window.pcSetWrapper(true)">Com info</button>' +
+                '</div>';
+
             return '<div class="fc-post-sheet-header">' +
                        '<div class="fc-post-sheet-header-row">' +
                            '<span class="fc-post-sheet-title">Escolher Card</span>' +
@@ -987,10 +1238,7 @@
                                '<button class="fc-post-plat-btn' + (dmePlatform === 'pc'      ? ' active' : '') + '" data-plat="pc"      onclick="window.dmeSwitchPlatform(this.dataset.plat)">PC</button>' +
                            '</div>' +
                        '</div>' +
-                       '<div class="fc-post-wrap-toggle">' +
-                           '<button class="fc-post-wrap-btn' + (!PC.withWrapper ? ' active' : '') + '" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
-                           '<button class="fc-post-wrap-btn' + ( PC.withWrapper ? ' active' : '') + '" id="pc-wrap-on"  onclick="window.pcSetWrapper(true)">Com info</button>' +
-                       '</div>' +
+                       wrapToggleHtml +
                    '</div>' +
                    searchBarHtml('pc-sheet-search', 'Pesquisar jogador...', 'pcFilterSheetRows') +
                    '<div class="fc-post-sheet-list" id="pc-sheet-list">' + buildCardList() + '</div>' +
@@ -1130,15 +1378,32 @@
         pcPushHistory();
         var img = new Image();
         img.onload = function () {
-            var cw = Math.round(PC.w * 0.33);
-            var ch = Math.round(cw * (img.naturalHeight / img.naturalWidth));
-            PC.elements.push({
-                type: 'card', img: img,
-                x: Math.round((PC.w - cw) / 2),
-                y: Math.round((PC.h - ch) / 2),
-                w: cw, h: ch,
-            });
-            PC.selected = PC.elements.length - 1;
+            var slotIdx = (PC.layoutMode === 'grid') ? PC.pendingSlot : null;
+            var slot    = (slotIdx !== null && PC.gridSlots[slotIdx]) ? PC.gridSlots[slotIdx] : null;
+
+            if (slot) {
+                /* Slot vazio recebe o card na posição calculada; se o slot já tinha
+                   um card (troca), remove o elemento antigo antes de inserir o novo */
+                PC.elements = PC.elements.filter(function (el) { return el.slotIndex !== slotIdx; });
+                PC.elements.push({
+                    type: 'card', img: img,
+                    x: Math.round(slot.x), y: Math.round(slot.y),
+                    w: Math.round(slot.w), h: Math.round(slot.h),
+                    slotIndex: slotIdx,
+                });
+            } else {
+                var cw = Math.round(PC.w * 0.33);
+                var ch = Math.round(cw * (img.naturalHeight / img.naturalWidth));
+                PC.elements.push({
+                    type: 'card', img: img,
+                    x: Math.round((PC.w - cw) / 2),
+                    y: Math.round((PC.h - ch) / 2),
+                    w: cw, h: ch,
+                });
+            }
+
+            PC.selected    = PC.elements.length - 1;
+            PC.pendingSlot = null;
             pcRedraw();
         };
         img.src = url;
@@ -1302,9 +1567,12 @@
         }
 
         // Limpa elementos e carrega novo fundo
-        PC.elements  = [];
-        PC.selected  = -1;
-        PC.history   = [];
+        PC.elements    = [];
+        PC.selected    = -1;
+        PC.history     = [];
+        PC.pendingSlot = null;
+        /* Recalcula a grade para as novas dimensões do canvas (mantém layoutMode/gridCount) */
+        PC.gridSlots   = (PC.layoutMode === 'grid') ? pcComputeGridSlots() : [];
         pcLoadBg(cfg.bg);
 
         // Atualiza visuais dos botões

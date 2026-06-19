@@ -1048,3 +1048,100 @@
     color: var(--clr-muted);
     font-size: 0.85em;
 }
+
+/* ════════════════════════════════════════════════════════
+   Popup inicial — Modo Livre vs Grade fixa (Criar Post)
+   ════════════════════════════════════════════════════════ */
+.fc-post-layout-chip {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 6;
+    background: rgba(13,13,13,0.85);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-text);
+    font-size: 0.75em;
+    font-weight: 700;
+    padding: 7px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.fc-post-layout-chip:active { background: var(--clr-orange); border-color: var(--clr-orange); }
+
+.fc-post-layout-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.72);
+    z-index: 99;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.fc-post-layout-modal {
+    width: 100%;
+    max-width: 380px;
+    max-height: 84vh;
+    overflow-y: auto;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: 18px;
+    padding: 20px 16px;
+}
+.fc-post-layout-title {
+    font-weight: 700;
+    font-size: 1em;
+    color: var(--clr-text);
+    text-align: center;
+    margin-bottom: 16px;
+}
+.fc-post-layout-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+}
+.fc-post-layout-option:active { border-color: var(--clr-orange); background: rgba(249,115,22,.08); }
+.fc-post-layout-option-label { font-weight: 700; font-size: 0.88em; color: var(--clr-text); }
+.fc-post-layout-option-sub   { font-size: 0.72em; color: var(--clr-muted); margin-top: 2px; }
+
+.fc-post-layout-grid-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Mini-prévia da grade (popup) */
+.fc-post-mini-grid {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.fc-post-mini-cell {
+    background: var(--clr-orange);
+    border-radius: 2px;
+}
+.fc-post-mini-cell.empty { background: var(--clr-border); }
+
+/* Mini-prévia do Modo Livre (cards soltos rotacionados) */
+.fc-post-layout-free-preview {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+}
+.fc-post-layout-free-rect {
+    position: absolute;
+    background: var(--clr-orange);
+    border-radius: 2px;
+}
