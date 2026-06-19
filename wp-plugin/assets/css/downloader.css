@@ -645,6 +645,73 @@
     margin: 10px auto 0;
     flex-shrink: 0;
 }
+
+/* Toggle de fonte: DMEs ↔ Squads (topo do sheet) */
+.fc-post-source-toggle {
+    display: flex;
+    margin: 14px 16px 0;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.fc-post-source-btn {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 0.82em;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    color: var(--clr-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.fc-post-source-btn.active {
+    background: var(--clr-orange);
+    color: #fff;
+}
+
+/* Corpo dinâmico do sheet — precisa propagar o contexto flex
+   para que .fc-post-sheet-list (flex:1; overflow-y:auto) role corretamente */
+#pc-sheet-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Linha de squad na lista (fonte = Squads) */
+.fc-post-squad-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--clr-border);
+    cursor: pointer;
+    gap: 10px;
+    transition: background 0.12s;
+}
+.fc-post-squad-row:active { background: var(--clr-surface2); }
+.fc-post-squad-row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.fc-post-squad-row-name {
+    font-weight: 700;
+    font-size: 0.88em;
+    color: var(--clr-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.fc-post-squad-row-count {
+    font-size: 0.72em;
+    color: var(--clr-muted);
+}
 .fc-post-sheet-header {
     display: flex;
     align-items: center;

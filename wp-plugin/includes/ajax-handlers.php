@@ -111,6 +111,7 @@ function fc_dl_ajax_get_squad() {
             'name'      => $p['name']     ?? '',
             'rating'    => $p['rating']   ?? '',
             'position'  => $p['position'] ?? '',
+            'face'      => $normalized['face'] ?? '',   // URL da foto — usado no picker do post creator
             'card_html' => $card_html,
         ];
     }

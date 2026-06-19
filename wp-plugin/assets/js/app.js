@@ -601,7 +601,11 @@
         mode:        'stories', // 'stories' | 'feed'
         w:           941,        // largura canvas (muda com o modo)
         h:           1672,       // altura canvas  (muda com o modo)
-        dmeItems:    null,   // cache dos players DME
+        dmeItems:    null,
+        sheetSource: 'dme',      // 'dme' | 'squads' — fonte ativa no sheet de seleção
+        squadsList:  null,       // cache de squads carregados (loaded && total>0)
+        squadPlayersCache: {},   // { [label]: players[] } — evita refetch ao voltar
+        squadView:   null,       // { label, players, loading? } quando dentro de um squad; null = lista de squads   // cache dos players DME
         fontReady:   false,
     };
 
@@ -681,23 +685,14 @@
             /* Overlay do sheet */
             '<div id="pc-sheet-overlay" class="fc-post-sheet-overlay" onclick="window.pcCloseSheet()"></div>' +
 
-            /* Bottom sheet — picker de cards */
+            /* Bottom sheet — picker de cards (DMEs ou Squads) */
             '<div id="pc-card-sheet" class="fc-post-sheet">' +
                 '<div class="fc-post-sheet-handle"></div>' +
-                '<div class="fc-post-sheet-header">' +
-                    '<div class="fc-post-sheet-header-row">' +
-                        '<span class="fc-post-sheet-title">Escolher Card</span>' +
-                        '<div class="fc-post-plat-toggle">' +
-                            '<button class="fc-post-plat-btn' + (dmePlatform === 'console' ? ' active' : '') + '" data-plat="console" onclick="window.dmeSwitchPlatform(this.dataset.plat)">Console</button>' +
-                            '<button class="fc-post-plat-btn' + (dmePlatform === 'pc'      ? ' active' : '') + '" data-plat="pc"      onclick="window.dmeSwitchPlatform(this.dataset.plat)">PC</button>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="fc-post-wrap-toggle">' +
-                        '<button class="fc-post-wrap-btn" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
-                        '<button class="fc-post-wrap-btn active" id="pc-wrap-on" onclick="window.pcSetWrapper(true)">Com info</button>' +
-                    '</div>' +
+                '<div class="fc-post-source-toggle">' +
+                    '<button class="fc-post-source-btn' + (PC.sheetSource === 'dme'    ? ' active' : '') + '" data-source="dme"    onclick="window.pcSwitchSource(this.dataset.source)">DMEs</button>' +
+                    '<button class="fc-post-source-btn' + (PC.sheetSource === 'squads' ? ' active' : '') + '" data-source="squads" onclick="window.pcSwitchSource(this.dataset.source)">Squads</button>' +
                 '</div>' +
-                '<div class="fc-post-sheet-list">' + buildCardList() + '</div>' +
+                '<div id="pc-sheet-body">' + pcSheetBodyHtml() + '</div>' +
             '</div>' +
 
             /* Painel de texto */
@@ -975,9 +970,202 @@
 
     /* ── Card sheet ──────────────────────────────────────────── */
     window.pcOpenCardSheet = function() {
+        pcRenderSheetBody(); // garante estado fresco (ex.: dmePlatform alterado na aba DME)
         var s = $('pc-card-sheet'), o = $('pc-sheet-overlay');
         if (s) s.classList.add('open');
         if (o) o.classList.add('open');
+    };
+
+    /* ── Corpo dinâmico do sheet (DME | lista de Squads | jogadores do Squad) */
+    function pcSheetBodyHtml() {
+        if (PC.sheetSource === 'dme') {
+            return '<div class="fc-post-sheet-header">' +
+                       '<div class="fc-post-sheet-header-row">' +
+                           '<span class="fc-post-sheet-title">Escolher Card</span>' +
+                           '<div class="fc-post-plat-toggle">' +
+                               '<button class="fc-post-plat-btn' + (dmePlatform === 'console' ? ' active' : '') + '" data-plat="console" onclick="window.dmeSwitchPlatform(this.dataset.plat)">Console</button>' +
+                               '<button class="fc-post-plat-btn' + (dmePlatform === 'pc'      ? ' active' : '') + '" data-plat="pc"      onclick="window.dmeSwitchPlatform(this.dataset.plat)">PC</button>' +
+                           '</div>' +
+                       '</div>' +
+                       '<div class="fc-post-wrap-toggle">' +
+                           '<button class="fc-post-wrap-btn' + (!PC.withWrapper ? ' active' : '') + '" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
+                           '<button class="fc-post-wrap-btn' + ( PC.withWrapper ? ' active' : '') + '" id="pc-wrap-on"  onclick="window.pcSetWrapper(true)">Com info</button>' +
+                       '</div>' +
+                   '</div>' +
+                   searchBarHtml('pc-sheet-search', 'Pesquisar jogador...', 'pcFilterSheetRows') +
+                   '<div class="fc-post-sheet-list" id="pc-sheet-list">' + buildCardList() + '</div>' +
+                   '<div id="pc-sheet-empty" class="fc-dl-search-empty" style="display:none;">Nenhum resultado encontrado.</div>';
+        }
+
+        // sheetSource === 'squads'
+        if (!PC.squadView) {
+            if (PC.squadsList === null) {
+                return '<p style="padding:24px 16px;color:var(--clr-muted);font-size:0.85em;text-align:center;">Carregando squads...</p>';
+            }
+            return '<div class="fc-post-sheet-header">' +
+                       '<div class="fc-post-sheet-header-row">' +
+                           '<span class="fc-post-sheet-title">Escolher Squad</span>' +
+                       '</div>' +
+                   '</div>' +
+                   searchBarHtml('pc-sheet-search', 'Pesquisar squad...', 'pcFilterSheetRows') +
+                   '<div class="fc-post-sheet-list" id="pc-sheet-list">' + buildSquadList() + '</div>' +
+                   '<div id="pc-sheet-empty" class="fc-dl-search-empty" style="display:none;">Nenhum squad encontrado.</div>';
+        }
+
+        if (PC.squadView.loading) {
+            return '<p style="padding:24px 16px;color:var(--clr-muted);font-size:0.85em;text-align:center;">Carregando jogadores...</p>';
+        }
+        return '<div class="fc-post-sheet-header">' +
+                   '<div class="fc-post-sheet-header-row">' +
+                       '<button type="button" class="fc-dl-back" style="min-width:auto;" onclick="window.pcBackToSquadList()">← Voltar</button>' +
+                       '<span class="fc-post-sheet-title">' + esc(PC.squadView.label) + '</span>' +
+                   '</div>' +
+               '</div>' +
+               searchBarHtml('pc-sheet-search', 'Pesquisar jogador...', 'pcFilterSheetRows') +
+               '<div class="fc-post-sheet-list" id="pc-sheet-list">' + buildSquadPlayerList(PC.squadView.players, PC.squadView.label) + '</div>' +
+               '<div id="pc-sheet-empty" class="fc-dl-search-empty" style="display:none;">Nenhum jogador encontrado.</div>';
+    }
+
+    function pcRenderSheetBody() {
+        var body = $('pc-sheet-body');
+        if (body) body.innerHTML = pcSheetBodyHtml();
+    }
+
+    /* ── Filtro único para qualquer lista ativa no sheet ─────────── */
+    window.pcFilterSheetRows = function (query) {
+        var selector = (PC.sheetSource === 'squads' && !PC.squadView)
+            ? '#pc-sheet-list .fc-post-squad-row'
+            : '#pc-sheet-list .fc-post-card-row';
+        fcdlFilterElements(selector, query, 'pc-sheet-empty');
+        fcdlToggleClear('pc-sheet-search');
+    };
+
+    /* ── Alternar fonte: DMEs ↔ Squads ───────────────────────────── */
+    window.pcSwitchSource = function (source) {
+        if (PC.sheetSource === source) return;
+        PC.sheetSource = source;
+        PC.squadView   = null;
+        document.querySelectorAll('.fc-post-source-btn').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.source === source);
+        });
+        pcRenderSheetBody();
+        if (source === 'squads' && PC.squadsList === null) {
+            pcLoadSquadsList();
+        }
+    };
+
+    function pcLoadSquadsList() {
+        ajax('fc_dl_get_squads', {}).then(function (res) {
+            PC.squadsList = res.success
+                ? (res.data || []).filter(function (s) { return s.loaded && s.total > 0; })
+                : [];
+            pcRenderSheetBody();
+        }).catch(function () {
+            PC.squadsList = [];
+            pcRenderSheetBody();
+        });
+    }
+
+    function buildSquadList() {
+        if (!PC.squadsList || !PC.squadsList.length) {
+            return '<p style="padding:20px 16px;color:var(--clr-muted);font-size:0.85em;">Nenhum squad carregado com jogadores.</p>';
+        }
+        return PC.squadsList.map(function (sq) {
+            return '<div class="fc-post-squad-row" data-search="' + esc(sq.name) + '" data-label="' + esc(sq.label) + '" onclick="window.pcOpenSquadPlayers(this.dataset.label)">' +
+                '<div class="fc-post-squad-row-info">' +
+                    '<span class="fc-post-squad-row-name">' + esc(sq.name) + '</span>' +
+                    '<span class="fc-post-squad-row-count">' + sq.total + ' jogadores</span>' +
+                '</div>' +
+                '<span class="fc-post-card-add-btn" style="background:var(--clr-orange);">›</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    window.pcOpenSquadPlayers = function (label) {
+        if (PC.squadPlayersCache[label]) {
+            PC.squadView = { label: label, players: PC.squadPlayersCache[label] };
+            pcRenderSheetBody();
+            return;
+        }
+        PC.squadView = { label: label, players: [], loading: true };
+        pcRenderSheetBody();
+        ajax('fc_dl_get_squad', { label: label }).then(function (res) {
+            var players = (res.success && res.data.loaded) ? (res.data.players || []) : [];
+            PC.squadPlayersCache[label] = players;
+            PC.squadView = { label: label, players: players };
+            pcRenderSheetBody();
+        }).catch(function () {
+            PC.squadView = { label: label, players: [] };
+            pcRenderSheetBody();
+        });
+    };
+
+    window.pcBackToSquadList = function () {
+        PC.squadView = null;
+        pcRenderSheetBody();
+    };
+
+    function buildSquadPlayerList(players, label) {
+        if (!players || !players.length) {
+            return '<p style="padding:20px 16px;color:var(--clr-muted);font-size:0.85em;">Nenhum jogador neste squad.</p>';
+        }
+        return players.map(function (p, i) {
+            var faceHtml = p.face
+                ? '<img src="' + esc(p.face) + '" alt="" class="fc-post-card-face" loading="lazy">'
+                : '<div class="fc-post-card-face fc-post-card-face-fallback"></div>';
+            return '<div class="fc-post-card-row" data-search="' + esc(p.name) + '" data-label="' + esc(label) + '" data-idx="' + i + '" onclick="window.pcAddSquadCard(this.dataset.label, this.dataset.idx)">' +
+                faceHtml +
+                '<div class="fc-post-card-row-info">' +
+                    '<span class="fc-post-card-rating">' + esc(String(p.rating)) + '</span>' +
+                    '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
+                    '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
+                '</div>' +
+                '<span class="fc-post-card-add-btn">+</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    /* ── Adiciona PNG ao canvas (compartilhado entre DME e Squad) ── */
+    function pcAddImageToCanvas(url) {
+        pcPushHistory();
+        var img = new Image();
+        img.onload = function () {
+            var cw = Math.round(PC.w * 0.33);
+            var ch = Math.round(cw * (img.naturalHeight / img.naturalWidth));
+            PC.elements.push({
+                type: 'card', img: img,
+                x: Math.round((PC.w - cw) / 2),
+                y: Math.round((PC.h - ch) / 2),
+                w: cw, h: ch,
+            });
+            PC.selected = PC.elements.length - 1;
+            pcRedraw();
+        };
+        img.src = url;
+    }
+
+    window.pcAddSquadCard = function (label, idx) {
+        window.pcCloseSheet();
+        var loadEl = $('fc-post-load');
+        if (loadEl) loadEl.style.display = 'flex';
+
+        var fd = new FormData();
+        fd.append('action',    'fc_dl_generate_png');
+        fd.append('nonce',     FC_DL.nonce);
+        fd.append('label',     label);
+        fd.append('indices[]', idx);
+
+        fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (loadEl) loadEl.style.display = 'none';
+                if (!res.success) { alert('Erro: ' + ((res.data && res.data.message) || '?')); return; }
+                pcAddImageToCanvas(res.data.url);
+            })
+            .catch(function (err) {
+                if (loadEl) loadEl.style.display = 'none';
+                alert('Falha ao gerar card: ' + err.message);
+            });
     };
     window.pcCloseSheet = function() {
         var s = $('pc-card-sheet'), o = $('pc-sheet-overlay');
@@ -1008,25 +1196,7 @@
             .then(function(res) {
                 if (loadEl) loadEl.style.display = 'none';
                 if (!res.success) { alert('Erro: ' + ((res.data && res.data.message) || '?')); return; }
-
-                pcPushHistory();
-                var img = new Image();
-                img.onload = function() {
-                    /* 33% da largura do canvas como tamanho inicial */
-                    var cw = Math.round(PC.w * 0.33);
-                    var ch = Math.round(cw * (img.naturalHeight / img.naturalWidth));
-                    PC.elements.push({
-                        type: 'card',
-                        img:  img,
-                        x:    Math.round((PC.w - cw) / 2),
-                        y:    Math.round((PC.h - ch) / 2),
-                        w:    cw,
-                        h:    ch,
-                    });
-                    PC.selected = PC.elements.length - 1;
-                    pcRedraw();
-                };
-                img.src = res.data.url;
+                pcAddImageToCanvas(res.data.url);
             })
             .catch(function(err) {
                 if (loadEl) loadEl.style.display = 'none';
