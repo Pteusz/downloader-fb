@@ -1055,6 +1055,52 @@
         return Math.sqrt(Math.pow(x - hx, 2) + Math.pow(y - hy, 2)) < 28;
     }
 
+    /* Caminho de retângulo arredondado reutilizável (pill quando r = h/2) */
+    function pcRoundRectPath(ctx, x, y, w, h, r) {
+        r = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y,     x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x,     y + h, r);
+        ctx.arcTo(x,     y + h, x,     y,     r);
+        ctx.arcTo(x,     y,     x + w, y,     r);
+        ctx.closePath();
+    }
+
+    /* Tag de preço — fundo escuro translúcido + borda laranja em pill,
+       no mesmo estilo das barras de marca do post (topo/rodapé) */
+    function pcDrawPriceTag(ctx, el) {
+        ctx.save();
+        var pf   = Math.min(54, Math.max(14, Math.round(el.w * 0.13)));
+        ctx.font = '800 ' + pf + 'px Montserrat,Arial,sans-serif';
+        var padX = Math.round(pf * 0.7);
+        var padY = Math.round(pf * 0.4);
+        var textW = ctx.measureText(el.price).width;
+        var tagW  = textW + padX * 2;
+        var tagH  = pf + padY * 2;
+        var tagX  = el.x + el.w / 2 - tagW / 2;
+        var tagY  = el.y + el.h + Math.round(pf * 0.25);
+        var rad   = tagH / 2;
+
+        ctx.shadowColor = 'rgba(0,0,0,0.45)';
+        ctx.shadowBlur  = 6;
+        ctx.fillStyle   = 'rgba(10,10,10,0.86)';
+        pcRoundRectPath(ctx, tagX, tagY, tagW, tagH, rad);
+        ctx.fill();
+
+        ctx.shadowBlur   = 0;
+        ctx.lineWidth    = Math.max(1.5, pf * 0.08);
+        ctx.strokeStyle  = '#f97316';
+        pcRoundRectPath(ctx, tagX, tagY, tagW, tagH, rad);
+        ctx.stroke();
+
+        ctx.fillStyle    = '#ffffff';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(el.price, tagX + tagW / 2, tagY + tagH / 2 + 1);
+        ctx.restore();
+    }
+
     /* ── Redraw ──────────────────────────────────────────────── */
     function pcRedraw() {
         if (!PC.ctx) return;
@@ -1067,16 +1113,7 @@
             if ((el.type === 'bg' || el.type === 'card') && el.img) {
                 ctx.drawImage(el.img, el.x, el.y, el.w, el.h);
                 if (el.type === 'card' && el.price) {
-                    ctx.save();
-                    var pf = Math.min(72, Math.max(18, Math.round(el.w * 0.15)));
-                    ctx.font = '800 ' + pf + 'px Montserrat,Arial,sans-serif';
-                    ctx.fillStyle = '#ffffff';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'top';
-                    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                    ctx.shadowBlur = 10;
-                    ctx.fillText(el.price, el.x + el.w / 2, el.y + el.h + Math.round(pf * 0.3));
-                    ctx.restore();
+                    pcDrawPriceTag(ctx, el);
                 }
             } else if (el.type === 'text') {
                 ctx.save();
@@ -1406,7 +1443,7 @@
                 var imgAspect = img.naturalWidth / img.naturalHeight;
                 /* Com preço, reserva uma fatia pequena no rodapé da célula pro texto
                    (em vez de aplicar a um card já no tamanho cheio da célula) */
-                var priceH  = price ? Math.max(24, slot.cellH * 0.11) : 0;
+                var priceH  = price ? Math.max(30, slot.cellH * 0.135) : 0;
                 var availH  = slot.cellH - priceH;
                 var fitW, fitH;
                 if (slot.cellW / availH > imgAspect) {
