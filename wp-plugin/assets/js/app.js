@@ -839,12 +839,12 @@
         PC.layoutMode  = mode;
         PC.gridCount   = (mode === 'grid') ? count : null;
         PC.pendingSlot = null;
-        if (mode === 'grid') PC.withWrapper = false; // grade sempre usa card puro (alinhamento uniforme)
 
         if (changing) {
             PC.elements = [];
             PC.selected = -1;
             PC.history  = [];
+            pcLoadBg(POST_MODES[PC.mode].bg); // PC.elements=[] tambem removeu o fundo - recarrega
         }
 
         PC.gridSlots = (mode === 'grid') ? pcComputeGridSlots() : [];
@@ -955,15 +955,20 @@
     function pcDrawGridGuides() {
         if (PC.layoutMode !== 'grid' || !PC.gridSlots.length) return;
         var ctx = PC.ctx;
-        PC.gridSlots.forEach(function (slot) {
+        PC.gridSlots.forEach(function (slot, idx) {
             if (slot.filled) return;
+            var pending = (idx === PC.pendingSlot);
             ctx.save();
-            ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-            ctx.lineWidth = Math.max(2, 3 / pcScale());
-            ctx.setLineDash([14 / pcScale(), 10 / pcScale()]);
+            if (pending) {
+                ctx.fillStyle = 'rgba(249,115,22,0.22)';
+                ctx.fillRect(slot.cellX, slot.cellY, slot.cellW, slot.cellH);
+            }
+            ctx.strokeStyle = pending ? '#f97316' : 'rgba(255,255,255,0.35)';
+            ctx.lineWidth = Math.max(2, (pending ? 4 : 3) / pcScale());
+            ctx.setLineDash(pending ? [] : [14 / pcScale(), 10 / pcScale()]);
             ctx.strokeRect(slot.cellX, slot.cellY, slot.cellW, slot.cellH);
             ctx.setLineDash([]);
-            ctx.fillStyle = 'rgba(255,255,255,0.45)';
+            ctx.fillStyle = pending ? '#f97316' : 'rgba(255,255,255,0.45)';
             ctx.font = 'bold ' + Math.round(slot.cellW * 0.26) + 'px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1149,6 +1154,7 @@
                 var slotIdx = pcHitEmptySlot(pos.x, pos.y);
                 if (slotIdx >= 0) {
                     PC.pendingSlot = slotIdx;
+                    pcRedraw();
                     window.pcOpenCardSheet();
                     return;
                 }
@@ -1224,7 +1230,7 @@
     /* ── Corpo dinâmico do sheet (DME | lista de Squads | jogadores do Squad) */
     function pcSheetBodyHtml() {
         if (PC.sheetSource === 'dme') {
-            var wrapToggleHtml = (PC.layoutMode === 'grid') ? '' :
+            var wrapToggleHtml =
                 '<div class="fc-post-wrap-toggle">' +
                     '<button class="fc-post-wrap-btn' + (!PC.withWrapper ? ' active' : '') + '" id="pc-wrap-off" onclick="window.pcSetWrapper(false)">Só card</button>' +
                     '<button class="fc-post-wrap-btn' + ( PC.withWrapper ? ' active' : '') + '" id="pc-wrap-on"  onclick="window.pcSetWrapper(true)">Com info</button>' +
@@ -1382,13 +1388,26 @@
             var slot    = (slotIdx !== null && PC.gridSlots[slotIdx]) ? PC.gridSlots[slotIdx] : null;
 
             if (slot) {
+                /* Ajusta ao espaco da celula pela proporcao REAL da imagem carregada
+                   (nao a 2:3 fixa do card puro) - funciona tanto pro "So card" quanto
+                   pro wrapper "Com info" (mais alto, por causa do nome + expiracao) */
+                var imgAspect = img.naturalWidth / img.naturalHeight;
+                var fitW, fitH;
+                if (slot.cellW / slot.cellH > imgAspect) {
+                    fitH = slot.cellH; fitW = fitH * imgAspect;
+                } else {
+                    fitW = slot.cellW; fitH = fitW / imgAspect;
+                }
+                var fitX = slot.cellX + (slot.cellW - fitW) / 2;
+                var fitY = slot.cellY;
+
                 /* Slot vazio recebe o card na posição calculada; se o slot já tinha
                    um card (troca), remove o elemento antigo antes de inserir o novo */
                 PC.elements = PC.elements.filter(function (el) { return el.slotIndex !== slotIdx; });
                 PC.elements.push({
                     type: 'card', img: img,
-                    x: Math.round(slot.x), y: Math.round(slot.y),
-                    w: Math.round(slot.w), h: Math.round(slot.h),
+                    x: Math.round(fitX), y: Math.round(fitY),
+                    w: Math.round(fitW), h: Math.round(fitH),
                     slotIndex: slotIdx,
                 });
             } else {
