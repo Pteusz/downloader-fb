@@ -37,6 +37,67 @@
         if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
     }
 
+    /* ── Barra de pesquisa (helper reutilizável) ────────────────
+       Filtra elementos via data-search, sem re-fetch/re-render do HTML —
+       preserva foco do input e scroll da página.
+    ── ────────────────────────────────────────────────────────── */
+    function searchBarHtml(id, placeholder, filterFnName) {
+        return '<div class="fc-dl-search-wrap">'
+            + '<svg class="fc-dl-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+            + '<input type="text" id="' + id + '" class="fc-dl-search-input" placeholder="' + esc(placeholder) + '" oninput="' + filterFnName + '(this.value)" autocomplete="off">'
+            + '<button type="button" class="fc-dl-search-clear" id="' + id + '-clear" style="display:none;" onclick="fcdlClearSearch(\'' + id + '\', \'' + filterFnName + '\')">\u00d7</button>'
+            + '</div>';
+    }
+
+    window.fcdlClearSearch = function (inputId, filterFnName) {
+        var inp = $(inputId);
+        if (!inp) return;
+        inp.value = '';
+        if (window[filterFnName]) window[filterFnName]('');
+        inp.focus();
+    };
+
+    /* Filtra NodeList por data-search; retorna true se algum ficou visível */
+    function fcdlFilterElements(selector, query, emptyId) {
+        var q     = (query || '').trim().toLowerCase();
+        var nodes = document.querySelectorAll(selector);
+        var anyVisible = false;
+        nodes.forEach(function (el) {
+            var txt   = (el.dataset.search || '').toLowerCase();
+            var match = !q || txt.indexOf(q) !== -1;
+            el.style.display = match ? '' : 'none';
+            if (match) anyVisible = true;
+        });
+        if (emptyId) {
+            var empty = $(emptyId);
+            if (empty) empty.style.display = (nodes.length && !anyVisible) ? '' : 'none';
+        }
+        return anyVisible;
+    }
+
+    function fcdlToggleClear(inputId) {
+        var inp = $(inputId), clearBtn = $(inputId + '-clear');
+        if (inp && clearBtn) clearBtn.style.display = inp.value ? '' : 'none';
+    }
+
+    window.fcdlFilterSquads = function (query) {
+        fcdlFilterElements('#fc-dl-screen-grid .fc-dl-squad-card', query, 'fc-dl-squads-empty');
+        fcdlToggleClear('fc-dl-squads-search');
+    };
+
+    window.fcdlFilterSquadPlayers = function (query) {
+        fcdlFilterElements('#fc-dl-screen-squad .fc-dl-player-wrap', query, 'fc-dl-squad-players-empty');
+        fcdlToggleClear('fc-dl-squad-players-search');
+    };
+
+    window.fcdlFilterDme = function (query) {
+        var anyP = fcdlFilterElements('#fc-dl-screen-dme .fc-dl-player-wrap', query, null);
+        var anyR = fcdlFilterElements('#fc-dl-screen-dme .fc-dl-reward-item', query, null);
+        var empty = $('fc-dl-dme-empty');
+        if (empty) empty.style.display = (!anyP && !anyR) ? '' : 'none';
+        fcdlToggleClear('fc-dl-dme-search');
+    };
+
     /* ── Tabs helper ─────────────────────────────────────────── */
     function tabs(active) {
         return '<div class="fc-dl-tabs">'
@@ -94,13 +155,14 @@
             + '<div class="fc-dl-topbar-right">'
             + '<button id="fc-dl-refresh-btn" class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlRefresh()">↻ Atualizar</button>'
             + '</div></div>'
+            + searchBarHtml('fc-dl-squads-search', 'Pesquisar squad...', 'fcdlFilterSquads')
             + '<div class="fc-dl-squad-grid">';
 
         squads.forEach(function (sq) {
             var badge = sq.loaded
                 ? '<span class="fc-dl-badge fc-dl-badge-ok">✓ ' + sq.total + ' jogadores</span>'
                 : '<span class="fc-dl-badge fc-dl-badge-empty">Não carregado</span>';
-            html += '<a class="fc-dl-squad-card" href="#squad-' + esc(sq.label) + '">'
+            html += '<a class="fc-dl-squad-card" data-search="' + esc(sq.name) + '" href="#squad-' + esc(sq.label) + '">'
                   + '<div class="fc-dl-squad-img" style="background-image:url(\'' + esc(sq.bg_image) + '\')"></div>'
                   + '<div class="fc-dl-squad-body">'
                   + '<div class="fc-dl-squad-name">' + esc(sq.name) + '</div>'
@@ -108,6 +170,7 @@
                   + badge + '</div></a>';
         });
         html += '</div>';
+        html += '<div id="fc-dl-squads-empty" class="fc-dl-search-empty" style="display:none;">Nenhum squad encontrado.</div>';
         $('fc-dl-screen-grid').innerHTML = html;
     }
 
@@ -167,16 +230,18 @@
             + '<button class="fc-dl-btn fc-dl-btn-ghost" onclick="fcdlToggleAll()">☑ Todos</button>'
             + '<button class="fc-dl-btn fc-dl-btn-primary" id="fc-dl-gen-squad-btn" onclick="fcdlGenPng()">🖼 Gerar PNG</button>'
             + '</div>'
+            + searchBarHtml('fc-dl-squad-players-search', 'Pesquisar jogador...', 'fcdlFilterSquadPlayers')
             + '<div class="fc-dl-players-grid">';
 
         data.players.forEach(function (p, i) {
-            html += '<label class="fc-dl-player-wrap">'
+            html += '<label class="fc-dl-player-wrap" data-search="' + esc(p.name) + '">'
                   + '<input type="checkbox" class="fc-dl-chk" data-idx="' + i + '" data-name="' + esc(p.name) + '">'
                   + '<div class="fc-dl-card-shell">' + p.card_html + '</div>'
                   + '<span class="fc-dl-player-label">' + esc(p.name) + '</span>'
                   + '</label>';
         });
         html += '</div>';
+        html += '<div id="fc-dl-squad-players-empty" class="fc-dl-search-empty" style="display:none;">Nenhum jogador encontrado.</div>';
         $('fc-dl-screen-squad').innerHTML = html;
     }
 
@@ -237,6 +302,7 @@
         html += '<h2>DME <span class="fc-dl-count">' + totalAll + '</span></h2>';
         html += '<button class="fc-dl-btn fc-dl-btn-ghost fc-dl-toggle-btn" onclick="fcdlToggleAllDme()">☑ Todos</button>';
         html += '</div>';
+        html += searchBarHtml('fc-dl-dme-search', 'Pesquisar jogador ou recompensa...', 'fcdlFilterDme');
 
         if (!items.length) {
             html += '<div class="fc-dl-center-box"><p>Nenhum item DME disponível.</p></div>';
@@ -271,7 +337,7 @@
                       + esc(p.expires_in)
                       + '</div>'
                     : '';
-                html += '<label class="fc-dl-player-wrap">'
+                html += '<label class="fc-dl-player-wrap" data-search="' + esc(p.name) + '">'
                       + '<input type="checkbox" class="fc-dl-dme-chk"'
                       + ' data-global-idx="' + p.global_idx + '"'
                       + ' data-name="' + esc(p.name) + '">'
@@ -299,7 +365,7 @@
                     ? '<img src="' + esc(r.reward_img) + '" alt="' + esc(r.name) + '" loading="lazy">'
                     : '<div class="fc-dl-reward-placeholder">📦</div>';
 
-                html += '<div class="fc-dl-reward-item">'
+                html += '<div class="fc-dl-reward-item" data-search="' + esc(r.name) + '">'
                       + '<div class="fc-dl-reward-card">' + imgContent + '</div>'
                       + expiresBadge
                       + '<span class="fc-dl-reward-label">' + esc(r.name) + '</span>'
@@ -308,6 +374,7 @@
             html += '</div>';
         }
 
+        html += '<div id="fc-dl-dme-empty" class="fc-dl-search-empty" style="display:none;">Nenhum resultado encontrado.</div>';
         $('fc-dl-screen-dme').innerHTML = html;
 
         // Ouve mudanças nos checkboxes para atualizar a selbar

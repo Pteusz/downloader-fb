@@ -924,3 +924,60 @@
     margin-right: 4px;
 }
 .fc-post-card-price:empty { display: none; }
+
+/* ══════════════════════════════════════════════════════
+   BARRA DE PESQUISA — squads / squad detail / DME
+   ══════════════════════════════════════════════════════ */
+.fc-dl-search-wrap {
+    position: relative;
+    margin: 0 0 14px;
+}
+.fc-dl-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--clr-muted);
+    pointer-events: none;
+}
+.fc-dl-search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 38px 10px 36px;
+    background: var(--clr-surface2);
+    border: 1px solid var(--clr-border);
+    border-radius: 10px;
+    color: var(--clr-text);
+    font-size: 0.88em;
+    font-family: inherit;
+}
+.fc-dl-search-input:focus {
+    outline: none;
+    border-color: var(--clr-orange);
+}
+.fc-dl-search-input::placeholder { color: var(--clr-muted); }
+.fc-dl-search-clear {
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    color: var(--clr-muted);
+    font-size: 0.95em;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.fc-dl-search-empty {
+    padding: 26px 16px;
+    text-align: center;
+    color: var(--clr-muted);
+    font-size: 0.85em;
+}
