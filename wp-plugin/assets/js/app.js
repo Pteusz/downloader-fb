@@ -599,12 +599,12 @@
         stories: {
             w:  941,
             h:  1672,
-            bg: 'https://chamacoins.com.br/wp-content/uploads/2026/06/ChatGPT-Image-13-de-jun.-de-2026-16_54_23-1.png'
+            bg: 'https://chamacoins.com.br/wp-content/uploads/2026/06/chamacoins-st.png'
         },
         feed: {
             w:  1122,
             h:  1402,
-            bg: 'https://chamacoins.com.br/wp-content/uploads/2026/06/ChatGPT-Image-13-de-jun.-de-2026-18_26_51.png'
+            bg: 'https://chamacoins.com.br/wp-content/uploads/2026/06/chamacoins-feed.png'
         }
     };
 
@@ -1066,6 +1066,18 @@
         PC.elements.forEach(function(el, i) {
             if ((el.type === 'bg' || el.type === 'card') && el.img) {
                 ctx.drawImage(el.img, el.x, el.y, el.w, el.h);
+                if (el.type === 'card' && el.price) {
+                    ctx.save();
+                    var pf = Math.min(72, Math.max(18, Math.round(el.w * 0.15)));
+                    ctx.font = '800 ' + pf + 'px Montserrat,Arial,sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                    ctx.shadowBlur = 10;
+                    ctx.fillText(el.price, el.x + el.w / 2, el.y + el.h + Math.round(pf * 0.3));
+                    ctx.restore();
+                }
             } else if (el.type === 'text') {
                 ctx.save();
                 ctx.font       = (el.weight || '700') + ' ' + (el.size || 64) + 'px Montserrat,Arial,sans-serif';
@@ -1380,7 +1392,7 @@
     }
 
     /* ── Adiciona PNG ao canvas (compartilhado entre DME e Squad) ── */
-    function pcAddImageToCanvas(url) {
+    function pcAddImageToCanvas(url, price) {
         pcPushHistory();
         var img = new Image();
         img.onload = function () {
@@ -1392,9 +1404,13 @@
                    (nao a 2:3 fixa do card puro) - funciona tanto pro "So card" quanto
                    pro wrapper "Com info" (mais alto, por causa do nome + expiracao) */
                 var imgAspect = img.naturalWidth / img.naturalHeight;
+                /* Com preço, reserva uma fatia pequena no rodapé da célula pro texto
+                   (em vez de aplicar a um card já no tamanho cheio da célula) */
+                var priceH  = price ? Math.max(24, slot.cellH * 0.11) : 0;
+                var availH  = slot.cellH - priceH;
                 var fitW, fitH;
-                if (slot.cellW / slot.cellH > imgAspect) {
-                    fitH = slot.cellH; fitW = fitH * imgAspect;
+                if (slot.cellW / availH > imgAspect) {
+                    fitH = availH; fitW = fitH * imgAspect;
                 } else {
                     fitW = slot.cellW; fitH = fitW / imgAspect;
                 }
@@ -1409,6 +1425,7 @@
                     x: Math.round(fitX), y: Math.round(fitY),
                     w: Math.round(fitW), h: Math.round(fitH),
                     slotIndex: slotIdx,
+                    price: price || null,
                 });
             } else {
                 var cw = Math.round(PC.w * 0.33);
@@ -1418,6 +1435,7 @@
                     x: Math.round((PC.w - cw) / 2),
                     y: Math.round((PC.h - ch) / 2),
                     w: cw, h: ch,
+                    price: price || null,
                 });
             }
 
@@ -1468,6 +1486,20 @@
         var loadEl = $('fc-post-load');
         if (loadEl) loadEl.style.display = 'flex';
 
+        /* "Só card" não tem preço embutido no PNG (o wrapper "Com info" tem nome
+           + expiração) — busca o preço já carregado em PC.dmeItems pra desenhar
+           no canvas, sem precisar de outra chamada ao servidor */
+        var price = null;
+        if (!PC.withWrapper) {
+            var item = (PC.dmeItems || []).filter(function (p) { return Number(p.global_idx) === Number(globalIdx); })[0];
+            if (item) {
+                var cP = item.preco_console_brl || 0;
+                var pP = item.preco_pc_brl      || 0;
+                var pv = dmePlatform === 'pc' ? pP : cP;
+                if (pv > 0) price = 'R\u0024\u00a0' + pv.toFixed(2).replace('.', ',');
+            }
+        }
+
         var fd = new FormData();
         fd.append('action',       'fc_dl_generate_dme_png');
         fd.append('nonce',        FC_DL.nonce);
@@ -1480,7 +1512,7 @@
             .then(function(res) {
                 if (loadEl) loadEl.style.display = 'none';
                 if (!res.success) { alert('Erro: ' + ((res.data && res.data.message) || '?')); return; }
-                pcAddImageToCanvas(res.data.url);
+                pcAddImageToCanvas(res.data.url, price);
             })
             .catch(function(err) {
                 if (loadEl) loadEl.style.display = 'none';
