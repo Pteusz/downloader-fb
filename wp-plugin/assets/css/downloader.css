@@ -554,9 +554,16 @@
     inset: 0;
     background: rgba(0,0,0,0.6);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 12px;
     z-index: 5;
+}
+.fc-post-load-text {
+    color: #fff;
+    font-size: 0.85em;
+    font-weight: 700;
 }
 
 /* ── Toolbar inferior ────────────────────────────────── */
@@ -763,6 +770,41 @@
     transition: background 0.12s;
 }
 .fc-post-card-row:active { background: var(--clr-surface2); }
+.fc-post-card-row.selected {
+    background: rgba(249,115,22,.08);
+    border-left: 3px solid var(--clr-orange);
+    padding-left: 13px;
+}
+
+/* Checkbox de seleção múltipla (substitui o "+" estático em modo grade) */
+.fc-post-card-checkbox {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    accent-color: var(--clr-orange);
+    cursor: pointer;
+}
+
+/* Barra fixa "Concluir" no rodapé do sheet — sobrevive à troca DME/Squads */
+.fc-post-build-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--clr-border);
+    background: var(--clr-surface);
+    flex-shrink: 0;
+}
+.fc-post-build-bar span {
+    font-size: 0.82em;
+    font-weight: 700;
+    color: var(--clr-text);
+}
+#pc-build-confirm-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
 .fc-post-card-row-info {
     display: flex;
     align-items: center;

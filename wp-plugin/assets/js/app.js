@@ -633,7 +633,8 @@
         layoutMode:  'free',     // 'free' | 'grid'
         gridCount:   null,       // 4 | 8 | 12 | 16 | 20 quando layoutMode === 'grid'
         gridSlots:   [],         // [{cellX,cellY,cellW,cellH, x,y,w,h, filled, elementIndex}]
-        pendingSlot: null,       // índice do slot aguardando escolha de card no sheet   // cache dos players DME
+        pendingSlot: null,       // índice do slot recebendo a imagem ATUAL durante a montagem em lote
+        gridSelection: [],       // [{key, source:'dme'|'squad', globalIdx?|squadLabel?+idx?}] — seleção pendente de build   // cache dos players DME
         fontReady:   false,
     };
 
@@ -727,6 +728,10 @@
                     '<button class="fc-post-source-btn' + (PC.sheetSource === 'squads' ? ' active' : '') + '" data-source="squads" onclick="window.pcSwitchSource(this.dataset.source)">Squads</button>' +
                 '</div>' +
                 '<div id="pc-sheet-body">' + pcSheetBodyHtml() + '</div>' +
+                '<div id="pc-build-bar" class="fc-post-build-bar" style="display:none;">' +
+                    '<span id="pc-build-count">0 selecionados</span>' +
+                    '<button type="button" id="pc-build-confirm-btn" class="fc-dl-btn fc-dl-btn-primary" onclick="window.pcBuildGridFromSelection()" disabled>Concluir</button>' +
+                '</div>' +
             '</div>' +
 
             /* Painel de texto */
@@ -814,11 +819,6 @@
         chip.textContent = (PC.layoutMode === 'grid') ? ('Grade ' + PC.gridCount) : 'Modo Livre';
     }
 
-    function pcUpdateToolbarForLayout() {
-        var btn = $('pc-card-tool-btn');
-        if (btn) btn.style.display = (PC.layoutMode === 'grid') ? 'none' : '';
-    }
-
     window.pcReopenLayoutModal = function () {
         var overlay = $('pc-layout-overlay');
         if (!overlay) return;
@@ -836,9 +836,10 @@
             return;
         }
 
-        PC.layoutMode  = mode;
-        PC.gridCount   = (mode === 'grid') ? count : null;
-        PC.pendingSlot = null;
+        PC.layoutMode    = mode;
+        PC.gridCount     = (mode === 'grid') ? count : null;
+        PC.pendingSlot   = null;
+        PC.gridSelection = [];
 
         if (changing) {
             PC.elements = [];
@@ -853,7 +854,6 @@
         if (overlay) overlay.style.display = 'none';
 
         pcUpdateLayoutChip();
-        pcUpdateToolbarForLayout();
         pcRedraw();
     };
 
@@ -873,7 +873,22 @@
                   + ( pv > 0 ? 'R$\u00a0' + pv.toFixed(2).replace('.', ',') : '' )
                   + '</span>'
                 : '';
-            return '<div class="fc-post-card-row" onclick="window.pcAddCard(' + p.global_idx + ')">' +
+            if (PC.layoutMode === 'grid') {
+                var key     = 'dme:' + p.global_idx;
+                var checked = PC.gridSelection.some(function (s) { return s.key === key; });
+                return '<div class="fc-post-card-row' + (checked ? ' selected' : '') + '" data-search="' + esc(p.name) + '" data-sel-source="dme" data-sel-idx="' + p.global_idx + '" onclick="window.pcToggleGridSelect(this)">' +
+                    faceHtml +
+                    '<div class="fc-post-card-row-info">' +
+                        '<span class="fc-post-card-rating">' + esc(String(p.rating)) + '</span>' +
+                        '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
+                        '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
+                    '</div>' +
+                    priceSpan +
+                    '<input type="checkbox" class="fc-post-card-checkbox" tabindex="-1" ' + (checked ? 'checked' : '') + ' onclick="event.stopPropagation();">' +
+                '</div>';
+            }
+
+            return '<div class="fc-post-card-row" data-search="' + esc(p.name) + '" onclick="window.pcAddCard(' + p.global_idx + ')">' +
                 faceHtml +
                 '<div class="fc-post-card-row-info">' +
                     '<span class="fc-post-card-rating">' + esc(String(p.rating)) + '</span>' +
@@ -985,10 +1000,11 @@
         PC.selected  = -1;
         PC.history   = [];
         /* Toda visita à tela começa em modo livre — o popup decide o layout final */
-        PC.layoutMode  = 'free';
-        PC.gridCount   = null;
-        PC.gridSlots   = [];
-        PC.pendingSlot = null;
+        PC.layoutMode    = 'free';
+        PC.gridCount     = null;
+        PC.gridSlots     = [];
+        PC.pendingSlot   = null;
+        PC.gridSelection = [];
         canvasEl.width  = PC.w;
         canvasEl.height = PC.h;
 
@@ -1181,14 +1197,10 @@
                 var el = PC.elements[hit];
                 var locked = (PC.layoutMode === 'grid' && el.slotIndex !== undefined);
                 if (locked) {
-                    /* Card travado no slot: seleciona (mostra handle de deletar no canto,
-                       caso o usuário só queira limpar) e reabre o picker para trocar o
-                       jogador — fechar o sheet sem escolher revela o × para limpar */
-                    PC.dragging    = false;
-                    PC.pendingSlot = el.slotIndex;
-                    pcRedraw();
-                    window.pcOpenCardSheet();
-                    return;
+                    /* Card travado no slot: apenas seleciona (mostra × pra remover).
+                       Pra trocar o jogador: remove e use Concluir novamente — agora a
+                       montagem é sempre por seleção múltipla, não card a card. */
+                    PC.dragging = false;
                 } else {
                     PC.dragging = true;
                     PC.dragOffX = pos.x - el.x;
@@ -1198,12 +1210,11 @@
                 return;
             }
 
-            /* Nenhum elemento atingido — em modo grade, testa se tocou um slot vazio */
+            /* Nenhum elemento atingido — em modo grade, tocar um slot vazio também
+               abre o seletor (mesmo fluxo do botão "Card" na toolbar) */
             if (PC.layoutMode === 'grid') {
                 var slotIdx = pcHitEmptySlot(pos.x, pos.y);
                 if (slotIdx >= 0) {
-                    PC.pendingSlot = slotIdx;
-                    pcRedraw();
                     window.pcOpenCardSheet();
                     return;
                 }
@@ -1271,6 +1282,7 @@
     /* ── Card sheet ──────────────────────────────────────────── */
     window.pcOpenCardSheet = function() {
         pcRenderSheetBody(); // garante estado fresco (ex.: dmePlatform alterado na aba DME)
+        pcUpdateBuildBar();
         var s = $('pc-card-sheet'), o = $('pc-sheet-overlay');
         if (s) s.classList.add('open');
         if (o) o.classList.add('open');
@@ -1352,6 +1364,7 @@
             b.classList.toggle('active', b.dataset.source === source);
         });
         pcRenderSheetBody();
+        pcUpdateBuildBar();
         if (source === 'squads' && PC.squadsList === null) {
             pcLoadSquadsList();
         }
@@ -1416,6 +1429,20 @@
             var faceHtml = p.face
                 ? '<img src="' + esc(p.face) + '" alt="" class="fc-post-card-face" loading="lazy">'
                 : '<div class="fc-post-card-face fc-post-card-face-fallback"></div>';
+            if (PC.layoutMode === 'grid') {
+                var key     = 'squad:' + label + ':' + i;
+                var checked = PC.gridSelection.some(function (s) { return s.key === key; });
+                return '<div class="fc-post-card-row' + (checked ? ' selected' : '') + '" data-search="' + esc(p.name) + '" data-sel-source="squad" data-sel-label="' + esc(label) + '" data-sel-idx="' + i + '" onclick="window.pcToggleGridSelect(this)">' +
+                    faceHtml +
+                    '<div class="fc-post-card-row-info">' +
+                        '<span class="fc-post-card-rating">' + esc(String(p.rating)) + '</span>' +
+                        '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
+                        '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
+                    '</div>' +
+                    '<input type="checkbox" class="fc-post-card-checkbox" tabindex="-1" ' + (checked ? 'checked' : '') + ' onclick="event.stopPropagation();">' +
+                '</div>';
+            }
+
             return '<div class="fc-post-card-row" data-search="' + esc(p.name) + '" data-label="' + esc(label) + '" data-idx="' + i + '" onclick="window.pcAddSquadCard(this.dataset.label, this.dataset.idx)">' +
                 faceHtml +
                 '<div class="fc-post-card-row-info">' +
@@ -1429,9 +1456,10 @@
     }
 
     /* ── Adiciona PNG ao canvas (compartilhado entre DME e Squad) ── */
-    function pcAddImageToCanvas(url, price) {
+    function pcAddImageToCanvas(url, price, onDone) {
         pcPushHistory();
         var img = new Image();
+        img.onerror = function () { if (onDone) onDone(); }; // evita travar uma fila em lote por 1 imagem com falha
         img.onload = function () {
             var slotIdx = (PC.layoutMode === 'grid') ? PC.pendingSlot : null;
             var slot    = (slotIdx !== null && PC.gridSlots[slotIdx]) ? PC.gridSlots[slotIdx] : null;
@@ -1479,8 +1507,46 @@
             PC.selected    = PC.elements.length - 1;
             PC.pendingSlot = null;
             pcRedraw();
+            if (onDone) onDone();
         };
         img.src = url;
+    }
+
+    /* Busca o PNG de UM item (DME ou Squad) — usada tanto pelo add individual
+       (modo livre) quanto pela montagem em lote (modo grade) */
+    function pcFetchCardPng(entry) {
+        var fd = new FormData();
+        var price = null;
+
+        if (entry.source === 'dme') {
+            fd.append('action',       'fc_dl_generate_dme_png');
+            fd.append('nonce',        FC_DL.nonce);
+            fd.append('indices[]',    entry.globalIdx);
+            fd.append('with_wrapper', PC.withWrapper ? 'true' : 'false');
+            fd.append('platform',     dmePlatform);
+
+            if (!PC.withWrapper) {
+                var item = (PC.dmeItems || []).filter(function (p) { return Number(p.global_idx) === Number(entry.globalIdx); })[0];
+                if (item) {
+                    var cP = item.preco_console_brl || 0;
+                    var pP = item.preco_pc_brl      || 0;
+                    var pv = dmePlatform === 'pc' ? pP : cP;
+                    if (pv > 0) price = 'R\u0024\u00a0' + pv.toFixed(2).replace('.', ',');
+                }
+            }
+        } else {
+            fd.append('action',    'fc_dl_generate_png');
+            fd.append('nonce',     FC_DL.nonce);
+            fd.append('label',     entry.squadLabel);
+            fd.append('indices[]', entry.idx);
+        }
+
+        return fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (!res.success) throw new Error((res.data && res.data.message) || 'Erro ao gerar card');
+                return { url: res.data.url, price: price };
+            });
     }
 
     window.pcAddSquadCard = function (label, idx) {
@@ -1488,18 +1554,10 @@
         var loadEl = $('fc-post-load');
         if (loadEl) loadEl.style.display = 'flex';
 
-        var fd = new FormData();
-        fd.append('action',    'fc_dl_generate_png');
-        fd.append('nonce',     FC_DL.nonce);
-        fd.append('label',     label);
-        fd.append('indices[]', idx);
-
-        fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
+        pcFetchCardPng({ source: 'squad', squadLabel: label, idx: idx })
+            .then(function (result) {
                 if (loadEl) loadEl.style.display = 'none';
-                if (!res.success) { alert('Erro: ' + ((res.data && res.data.message) || '?')); return; }
-                pcAddImageToCanvas(res.data.url);
+                pcAddImageToCanvas(result.url, result.price);
             })
             .catch(function (err) {
                 if (loadEl) loadEl.style.display = 'none';
@@ -1511,6 +1569,115 @@
         if (s) s.classList.remove('open');
         if (o) o.classList.remove('open');
     };
+
+    /* ── Montagem em lote (modo grade): seleciona N jogadores, monta tudo de uma vez */
+    function pcSetLoadingProgress(done, total) {
+        var loadEl = $('fc-post-load');
+        if (!loadEl) return;
+        var txt = loadEl.querySelector('.fc-post-load-text');
+        if (!txt) {
+            txt = document.createElement('div');
+            txt.className = 'fc-post-load-text';
+            loadEl.appendChild(txt);
+        }
+        txt.textContent = 'Gerando ' + done + ' / ' + total + '...';
+    }
+
+    window.pcBuildGridFromSelection = function () {
+        if (!PC.gridSelection.length) return;
+        window.pcCloseSheet();
+
+        pcReindexSlots();
+        var emptySlots = [];
+        PC.gridSlots.forEach(function (s, i) { if (!s.filled) emptySlots.push(i); });
+
+        var batch = PC.gridSelection.slice(0, emptySlots.length);
+        PC.gridSelection = []; // consumido — fica pronto para uma nova seleção
+
+        var loadEl = $('fc-post-load');
+        if (loadEl) loadEl.style.display = 'flex';
+        pcSetLoadingProgress(0, batch.length);
+
+        var i = 0;
+        function next() {
+            if (i >= batch.length) {
+                if (loadEl) loadEl.style.display = 'none';
+                return;
+            }
+            var entry   = batch[i];
+            var slotIdx = emptySlots[i];
+
+            PC.pendingSlot = slotIdx; // realça no canvas qual slot está sendo preenchido agora
+            pcRedraw();
+
+            pcFetchCardPng(entry).then(function (result) {
+                PC.pendingSlot = slotIdx;
+                pcAddImageToCanvas(result.url, result.price, function () {
+                    i++;
+                    pcSetLoadingProgress(i, batch.length);
+                    next();
+                });
+            }).catch(function (err) {
+                console.error('[pcBuildGridFromSelection]', err);
+                i++;
+                pcSetLoadingProgress(i, batch.length);
+                next();
+            });
+        }
+        next();
+    };
+    /* ── Seleção múltipla (modo grade) ───────────────────────────── */
+    function pcUpdateBuildBar() {
+        var bar = $('pc-build-bar');
+        if (!bar) return;
+        if (PC.layoutMode !== 'grid') { bar.style.display = 'none'; return; }
+        bar.style.display = 'flex';
+
+        var emptyCount = PC.gridSlots.filter(function (s) { return !s.filled; }).length;
+        var n = PC.gridSelection.length;
+
+        var countEl = $('pc-build-count');
+        if (countEl) countEl.textContent = n + ' / ' + emptyCount + ' selecionados';
+
+        var btn = $('pc-build-confirm-btn');
+        if (btn) btn.disabled = (n === 0);
+    }
+
+    window.pcToggleGridSelect = function (rowEl) {
+        var source = rowEl.dataset.selSource;
+        var key, entry;
+
+        if (source === 'dme') {
+            var gIdx = parseInt(rowEl.dataset.selIdx, 10);
+            key   = 'dme:' + gIdx;
+            entry = { key: key, source: 'dme', globalIdx: gIdx };
+        } else {
+            var sqLabel = rowEl.dataset.selLabel;
+            var pIdx    = parseInt(rowEl.dataset.selIdx, 10);
+            key   = 'squad:' + sqLabel + ':' + pIdx;
+            entry = { key: key, source: 'squad', squadLabel: sqLabel, idx: pIdx };
+        }
+
+        var existingIdx = PC.gridSelection.findIndex(function (s) { return s.key === key; });
+        var checkbox    = rowEl.querySelector('.fc-post-card-checkbox');
+
+        if (existingIdx >= 0) {
+            PC.gridSelection.splice(existingIdx, 1);
+            rowEl.classList.remove('selected');
+            if (checkbox) checkbox.checked = false;
+        } else {
+            var emptyCount = PC.gridSlots.filter(function (s) { return !s.filled; }).length;
+            if (PC.gridSelection.length >= emptyCount) {
+                alert('Você já selecionou jogadores para todos os ' + emptyCount + ' espaço(s) vazio(s) da grade.');
+                return;
+            }
+            PC.gridSelection.push(entry);
+            rowEl.classList.add('selected');
+            if (checkbox) checkbox.checked = true;
+        }
+        pcUpdateBuildBar();
+    };
+
     window.pcSetWrapper = function(val) {
         PC.withWrapper = val;
         var on = $('pc-wrap-on'), off = $('pc-wrap-off');
@@ -1523,35 +1690,12 @@
         var loadEl = $('fc-post-load');
         if (loadEl) loadEl.style.display = 'flex';
 
-        /* "Só card" não tem preço embutido no PNG (o wrapper "Com info" tem nome
-           + expiração) — busca o preço já carregado em PC.dmeItems pra desenhar
-           no canvas, sem precisar de outra chamada ao servidor */
-        var price = null;
-        if (!PC.withWrapper) {
-            var item = (PC.dmeItems || []).filter(function (p) { return Number(p.global_idx) === Number(globalIdx); })[0];
-            if (item) {
-                var cP = item.preco_console_brl || 0;
-                var pP = item.preco_pc_brl      || 0;
-                var pv = dmePlatform === 'pc' ? pP : cP;
-                if (pv > 0) price = 'R\u0024\u00a0' + pv.toFixed(2).replace('.', ',');
-            }
-        }
-
-        var fd = new FormData();
-        fd.append('action',       'fc_dl_generate_dme_png');
-        fd.append('nonce',        FC_DL.nonce);
-        fd.append('indices[]',    globalIdx);
-        fd.append('with_wrapper', PC.withWrapper ? 'true' : 'false');
-        fd.append('platform',     dmePlatform);
-
-        fetch(FC_DL.ajaxUrl, { method: 'POST', body: fd })
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
+        pcFetchCardPng({ source: 'dme', globalIdx: globalIdx })
+            .then(function (result) {
                 if (loadEl) loadEl.style.display = 'none';
-                if (!res.success) { alert('Erro: ' + ((res.data && res.data.message) || '?')); return; }
-                pcAddImageToCanvas(res.data.url, price);
+                pcAddImageToCanvas(result.url, result.price);
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 if (loadEl) loadEl.style.display = 'none';
                 alert('Falha ao gerar card: ' + err.message);
             });
@@ -1655,12 +1799,13 @@
         }
 
         // Limpa elementos e carrega novo fundo
-        PC.elements    = [];
-        PC.selected    = -1;
-        PC.history     = [];
-        PC.pendingSlot = null;
+        PC.elements      = [];
+        PC.selected      = -1;
+        PC.history       = [];
+        PC.pendingSlot   = null;
+        PC.gridSelection = [];
         /* Recalcula a grade para as novas dimensões do canvas (mantém layoutMode/gridCount) */
-        PC.gridSlots   = (PC.layoutMode === 'grid') ? pcComputeGridSlots() : [];
+        PC.gridSlots     = (PC.layoutMode === 'grid') ? pcComputeGridSlots() : [];
         pcLoadBg(cfg.bg);
 
         // Atualiza visuais dos botões
