@@ -884,7 +884,7 @@
                         '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
                     '</div>' +
                     priceSpan +
-                    '<input type="checkbox" class="fc-post-card-checkbox" tabindex="-1" ' + (checked ? 'checked' : '') + ' onclick="event.stopPropagation();">' +
+                    '<input type="checkbox" class="fc-post-card-checkbox" tabindex="-1" ' + (checked ? 'checked' : '') + '>' +
                 '</div>';
             }
 
@@ -1439,7 +1439,7 @@
                         '<span class="fc-post-card-pos">' + esc(p.position) + '</span>' +
                         '<span class="fc-post-card-name">' + esc(p.name) + '</span>' +
                     '</div>' +
-                    '<input type="checkbox" class="fc-post-card-checkbox" tabindex="-1" ' + (checked ? 'checked' : '') + ' onclick="event.stopPropagation();">' +
+                    '<input type="checkbox" class="fc-post-card-checkbox" tabindex="-1" ' + (checked ? 'checked' : '') + '>' +
                 '</div>';
             }
 

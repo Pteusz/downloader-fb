@@ -782,7 +782,11 @@
     height: 20px;
     flex-shrink: 0;
     accent-color: var(--clr-orange);
-    cursor: pointer;
+    /* Puramente visual — o toque é sempre capturado pela linha inteira
+       (.fc-post-card-row), nunca pela checkbox em si. Evita a checkbox
+       "engolir" o toque via seu próprio comportamento nativo antes do
+       handler da linha rodar (causava contador travado/dessincronizado). */
+    pointer-events: none;
 }
 
 /* Barra fixa "Concluir" no rodapé do sheet — sobrevive à troca DME/Squads */
